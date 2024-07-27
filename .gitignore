@@ -1,0 +1,10 @@
+__pycache__
+*.pyc
+venv
+virtual
+db.json
+.env
+*.session
+config.ini
+.vscode/settings.json
+teagram_v2.session-journal

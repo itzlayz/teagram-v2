@@ -1,0 +1,6 @@
+git+https://github.com/KurimuzonAkuma/pyrogram.git
+qrcode==7.4.2
+psutil>=6.0.0
+ujson>=5.10.0
+uvloop>=0.19.0
+tgcrypto>=1.2.5
