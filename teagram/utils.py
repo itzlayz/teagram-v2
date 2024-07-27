@@ -1,3 +1,4 @@
+import os
 import time
 
 import typing
@@ -13,6 +14,9 @@ from enum import Enum
 from urllib.parse import urlparse
 
 FileLike = typing.Optional[typing.Union[BytesIO, IOBase, bytes, str]]
+BASE_PATH = os.path.normpath(
+    os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(__file__))), "..")
+)
 
 
 class Parser(Enum):
@@ -79,6 +83,7 @@ async def answer(
     caption = kwargs.pop("caption", None)
 
     if not data:
+        logging.error("Error, you didn't pass data")
         return
 
     if data and not caption:

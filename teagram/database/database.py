@@ -32,19 +32,25 @@ class Database:
             ujson.dump(self.data, file, indent=4)
 
     def get(self, section, key, default=None):
-        try:
-            return self.data[section][key]
-        except KeyError:
-            return default
+        return self.data.get(section, {}).get(key, default)
 
     def set(self, section, key, value):
-        try:
-            self.data[section][key] = value
-        except KeyError:
-            pass
-
+        if section not in self.data:
+            self.data[section] = {}
+        self.data[section][key] = value
         self._save()
 
     def clear(self):
         self.data = {}
         self._save()
+
+    def pop(self, section, key, default=None):
+        if section in self.data:
+            value = self.data[section].pop(key, default)
+            if not self.data[section]:
+                del self.data[section]
+
+            self._save()
+            return value
+
+        return default

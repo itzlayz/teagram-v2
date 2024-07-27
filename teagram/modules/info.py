@@ -28,7 +28,7 @@ async def get_ram() -> float:
 
 
 class InfoMod(loader.Module):
-    @loader.command(lambda message: True)
+    @loader.command()
     async def infocmd(self, message):
         ram = await get_ram()
         await utils.answer(
