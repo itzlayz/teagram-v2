@@ -8,7 +8,7 @@ import sys
 import os
 
 
-def kill():
+def kill(force: bool = False):
     if "DOCKER" in os.environ:
         sys.exit(0)
         return
@@ -18,7 +18,10 @@ def kill():
         for proc in process.children(recursive=True):
             proc.kill()
 
-        sys.exit(0)
+        if force:
+            process.kill()
+        else:
+            sys.exit(0)
     except psutil.NoSuchProcess:
         pass
 
@@ -46,6 +49,11 @@ class ManagerMod(loader.Module):
                 message, f"<b>✅ Successfuly restarted ({restart_time}s)</b>"
             )
             self.database.pop("teagram", "restart_info")
+
+    @loader.command()
+    async def stop(self, message, args=None):
+        await utils.answer(message, "<b>Stopping teagram...</b>")
+        kill(True)
 
     @loader.command()
     async def restart(self, message):
