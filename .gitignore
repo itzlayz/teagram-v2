@@ -8,3 +8,4 @@ db.json
 config.ini
 .vscode/settings.json
 teagram_v2.session-journal
+database.json
