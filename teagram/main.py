@@ -2,6 +2,8 @@ from .auth import Authorization
 from .loader import Loader
 
 from .database import Database
+from .utils import clear_console
+
 from pyrogram.methods.utilities.idle import idle
 
 import asyncio
@@ -27,9 +29,15 @@ class Main:
             asyncio.run(self.main())
 
     async def main(self):
+        clear_console()
+
         database = Database()
 
-        client = await Authorization().authorize()
+        client = await Authorization(
+            getattr(self.parser, "test_mode", False),
+            getattr(self.parser, "no_qr", False),
+        ).authorize()
+
         await client.connect()
         await client.initialize()
 

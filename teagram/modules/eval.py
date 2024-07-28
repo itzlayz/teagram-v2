@@ -1,8 +1,6 @@
 from .. import loader, utils
 
-import contextlib
 import ast
-import io
 import gc
 
 
@@ -32,49 +30,38 @@ async def async_eval(code: str, env: dict):
 
     env = {"__import__": __import__, **env}
 
-    stdout = io.StringIO()
-    stderr = io.StringIO()
+    exec(compile(parsed, filename="<ast>", mode="exec"), env)
+    result = await eval("_eval_temp()", env)
 
-    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-        try:
-            exec(compile(parsed, filename="<ast>", mode="exec"), env)
-            result = await eval("_eval_temp()", env)
-        except Exception:
-            result = None
-
-    return result, stdout.getvalue(), stderr.getvalue()
+    return result
 
 
-class EvalMod(loader.Module):
-    @loader.command()
+class Evaluator(loader.Module):
+    @loader.command(alias="e")
     async def eval(self, message, args):
         env = {
+            "self": self,
             "client": self.client,
             "message": message,
             "args": args,
         }
 
-        result, stdout, stderr = None, None, None
+        result = None
         try:
-            result, stdout, stderr = await async_eval(args.strip(), env)
+            result = await async_eval(args.strip(), env)
             if callable(result):
                 result = result.stringify()
+        except Exception as error:
+            result = str(error)
         finally:
             gc.collect()
-
-        std = (
-            f"<b>STDOUT:</b>\n<code>{stdout}</code>\n"
-            if stdout
-            else "" f"<b>STDERR:</b>\n<code>{stderr}</code>\n" if stderr else ""
-        )
 
         await utils.answer(
             message,
             (
-                "<b>Code:</b>\n"
-                f"<code>{args}</code>\n"
-                "<b>Result:</b>\n"
+                "<b>🐍 Code:</b>\n"
+                f'<pre language="python">{args}</pre>\n'
+                "<b>✅ Result:</b>\n"
                 f"<code>{result}</code>\n"
-            )
-            + std,
+            ),
         )

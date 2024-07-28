@@ -7,7 +7,7 @@ import time
 import asyncio
 
 
-class Terminal:
+class Stream:
     BUFFER = 8192
     UPDATE_INTERVAL = 0.25
 
@@ -19,18 +19,26 @@ class Terminal:
         self.stderr = ""
 
         self.finished = asyncio.Event()
+        self.process = None
 
     async def run(self, command: str):
-        process = await asyncio.create_subprocess_shell(
+        self.process = await asyncio.create_subprocess_shell(
             command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
+        self.command = command
 
-        await self.message.edit("Running command...")
+        await self.message.edit(
+            f"⏳ <b>Running command</b>:\n<code>{self.command}</code>"
+        )
 
-        stdout_task = asyncio.create_task(self._read_stream(process.stdout, "STDOUT"))
-        stderr_task = asyncio.create_task(self._read_stream(process.stderr, "STDERR"))
+        stdout_task = asyncio.create_task(
+            self._read_stream(self.process.stdout, "STDOUT")
+        )
+        stderr_task = asyncio.create_task(
+            self._read_stream(self.process.stderr, "STDERR")
+        )
 
-        await process.wait()
+        await self.process.wait()
 
         await stdout_task
         await stderr_task
@@ -55,21 +63,40 @@ class Terminal:
         current_time = time.time_ns()
         if current_time - self.last_update >= self.UPDATE_INTERVAL:
             self.last_update = current_time
+            text = (
+                f"<b>🖥️ Command:</b>\n<code>{self.command}</code>\n\n"
+                f"<b>🖥️ STDOUT:</b>\n<code>{self.stdout}</code>\n"
+            )
+            if self.stderr:
+                text += f"<b>❌ STDERR:</b>\n<code>{self.stderr}</code>"
 
-            self.message = await utils.answer(
-                self.message,
-                f"STDOUT:\n<code>{self.stdout}</code>\n\nSTDERR:\n<code>{self.stderr}</code>",
+            self.message = await utils.answer(self.message, text)
+
+    async def terminate(self):
+        if self.process and self.process.returncode is None:
+            self.process.terminate()
+            await self.process.wait()
+
+            text = (
+                "<b>❌ Terminated</b>\n"
+                f"<b>🖥️ Command:</b>\n<code>{self.command}</code>\n\n"
+                f"<b>🖥️ STDOUT:</b>\n<code>{self.stdout}</code>\n"
             )
 
+            if self.stderr:
+                text += f"<b>❌ STDERR:</b>\n<code>{self.stderr}</code>"
 
-class TerminalMod(loader.Module):
+            await utils.answer(self.message, text)
+
+
+class Terminal(loader.Module):
     def __init__(self):
-        self.terminals: List[Terminal] = []
+        self.terminals: List[Stream] = []
 
-    @loader.command()
+    @loader.command(alias=["terminal", "t"])
     async def bash(self, message: Message, args: str):
         command = args.strip()
-        terminal = Terminal(message)
+        terminal = Stream(message)
 
         self.terminals.append(terminal)
         await terminal.run(command)
@@ -83,3 +110,24 @@ class TerminalMod(loader.Module):
             self.terminals.remove(terminal)
         except ValueError:
             pass
+
+    @loader.command()
+    async def kill(self, message: Message):
+        reply = message.reply_to_message
+        terminal = next(
+            (
+                terminal
+                for terminal in self.terminals
+                if getattr(reply, "id", "") == terminal.message.id
+            ),
+            None,
+        )
+
+        if not reply or not terminal:
+            return await utils.answer(
+                message, "<b>❔ Reply to message with running terminal</b>"
+            )
+
+        await terminal.terminate()
+        if message.outgoing:
+            await message.delete()

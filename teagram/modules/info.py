@@ -27,16 +27,16 @@ async def get_ram() -> float:
         return "Can't fetch"
 
 
-class InfoMod(loader.Module):
+class Info(loader.Module):
     @loader.command()
     async def infocmd(self, message):
         ram = await get_ram()
         await utils.answer(
             message,
             (
-                "<b>Teagram v2</b>\n\n"
-                f"<b>RAM:</b> <code>{ram}MB</code>\n"
-                f"<b>Uptime:</b> <code>{utils.get_uptime()}</code>\n"
-                f"<b>Version:</b> <code>{__version__}</code>"
+                "<b>☕️ Teagram v2</b>\n\n"
+                f"<b>🧠 RAM:</b> <code>{ram}MB</code>\n"
+                f"<b>⏳ Uptime:</b> <code>{utils.get_uptime()}</code>\n"
+                f"<b>💭 Version:</b> <code>{__version__}</code>"
             ),
         )

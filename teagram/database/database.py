@@ -1,5 +1,11 @@
+import typing
+
 import ujson
 import os
+
+
+class JSONSerializable:
+    pass
 
 
 class Database:
@@ -31,10 +37,10 @@ class Database:
         with open(self.filename, "w") as file:
             ujson.dump(self.data, file, indent=4)
 
-    def get(self, section, key, default=None):
+    def get(self, section: str, key: str, default: typing.Any = None) -> typing.Any:
         return self.data.get(section, {}).get(key, default)
 
-    def set(self, section, key, value):
+    def set(self, section: str, key: str, value: JSONSerializable):
         if section not in self.data:
             self.data[section] = {}
         self.data[section][key] = value
@@ -44,7 +50,7 @@ class Database:
         self.data = {}
         self._save()
 
-    def pop(self, section, key, default=None):
+    def pop(self, section: str, key: str, default: typing.Any = None):
         if section in self.data:
             value = self.data[section].pop(key, default)
             if not self.data[section]:

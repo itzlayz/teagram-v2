@@ -1,21 +1,32 @@
 from .. import loader, utils
 
 
-class HelpMod(loader.Module):
+class Help(loader.Module):
     @loader.command()
-    async def helpcmd(self, message):
+    async def helpcmd(self, message, args):
         modules = self.loader.modules
-        all_text = ""
+        all_text = "<b>Teagram modules</b>\n"
+
+        core = False
+        if args and any([arg in args for arg in ("--core", "-c")]):
+            core = True
 
         for module in modules:
             module_name = module.__class__.__name__
+            origin = module.__origin__
+
             if module_name == "HelpMod":
                 continue
+
+            if core and origin != "<core>":
+                continue
+
+            smile = "☕" if origin != "<core>" else "🛠️"
 
             commands = ", ".join(
                 f"<code>{cmd}</code>" for cmd in module.commands.keys()
             )
-            text = f"<b>☕ {module_name}:</b> {commands}"
+            text = f"<b>{smile} {module_name}:</b> {commands}"
 
             all_text += text + "\n"
 

@@ -4,6 +4,9 @@ import time
 import typing
 import logging
 
+import random
+import string
+
 from io import BytesIO, IOBase
 from . import init_time
 
@@ -14,8 +17,15 @@ from enum import Enum
 from urllib.parse import urlparse
 
 FileLike = typing.Optional[typing.Union[BytesIO, IOBase, bytes, str]]
+
 BASE_PATH = os.path.normpath(
     os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(__file__))), "..")
+)
+LETTERS = (
+    string.ascii_letters
+    + string.ascii_lowercase
+    + string.ascii_uppercase
+    + string.digits
 )
 
 
@@ -106,3 +116,15 @@ async def answer(
             await message.delete()
 
     return result
+
+
+def random_id(length: int = 10):
+    return "".join(random.choice(LETTERS) for _ in range(length))
+
+
+def clear_console():
+    """Simulation of clear console, moves cursor to last line of command line. Working on every OS"""
+    print("\033[H\033[J", end="")
+
+
+rand = random_id

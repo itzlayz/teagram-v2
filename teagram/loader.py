@@ -2,6 +2,7 @@ import inspect
 import logging
 
 import sys
+import gc
 import os
 
 from importlib.machinery import ModuleSpec
@@ -10,11 +11,12 @@ from importlib.util import spec_from_file_location, module_from_spec
 from pyrogram.handlers.handler import Handler
 
 from pathlib import Path
+from typing import Final, List
 
 from .utils import BASE_PATH
 
 from .dispatcher import Dispatcher
-from .types import Module, StringLoader
+from .types import Module, StringLoader, ModuleException
 
 MODULES_PATH = Path(os.path.join(BASE_PATH, "teagram/modules"))
 CUSTOM_MODULES_PATH = Path(os.path.join(BASE_PATH, "teagram/custom_modules"))
@@ -84,6 +86,13 @@ class Loader:
         self.database = database
 
         self.modules = []
+        self.core_modules: Final[List[str]] = [
+            "eval",
+            "help",
+            "info",
+            "manager",
+            "terminal",
+        ]
 
         self.commands = {}
         self.aliases = {}
@@ -105,7 +114,13 @@ class Loader:
     async def load_modules(self):
         for path in MODULES_PATH.glob("*.py"):
             module_name = f"teagram.modules.{path.stem}"
-            await self.load_module(module_name, path)
+            if path.stem.lower() not in self.core_modules:
+                print(
+                    f"Found custom module in core modules, please delete it to hide this message ({path})"
+                )
+                continue
+
+            await self.load_module(module_name, path, origin="<core>")
 
         for path in CUSTOM_MODULES_PATH.glob("*.py"):
             module_name = f"teagram.custom_modules.{path.stem}"
@@ -127,7 +142,9 @@ class Loader:
             if file_path:
                 spec = spec_from_file_location(module_name, file_path)
             elif module_source:
-                spec = StringLoader(module_source, origin)
+                spec = ModuleSpec(
+                    module_name, StringLoader(module_source, origin), origin=origin
+                )
             else:
                 return
         else:
@@ -147,10 +164,13 @@ class Loader:
         )
 
         module_class.__origin__ = origin
-        name = module_class.__class__.__name__
+        name = getattr(module_class, "name", module_class.__class__.__name__)
+
+        if self.lookup(name):
+            raise ModuleException(f"❌ Module {name} has already loaded")
 
         self.prepare_module(module_class)
-        if save_file and origin == "<string>" and module_source:
+        if save_file and module_source:
             path = MODULES_PATH / f"{name}.py"
             path.write_text(module_source, encoding="UTF-8")
 
@@ -165,6 +185,9 @@ class Loader:
                 break
 
         if module:
+            if module.__origin__ == "<core>":
+                raise ModuleException("❌ Core module can't be unloaded")
+
             self.modules.remove(module)
             await module.on_unload()
 
@@ -187,6 +210,9 @@ class Loader:
                 k: v for k, v in self.aliases.items() if k not in module.commands.keys()
             }
 
+        gc.collect()
+        return module.__class__.__name__
+
     def prepare_module(self, module_class: Module):
         module_class.client = self.client
         module_class.database = self.database
@@ -201,7 +227,27 @@ class Loader:
         self.inline_handlers.extend(module_class.inline_handlers)
         self.callback_handlers.extend(module_class.callback_handlers)
 
+        for name, command in module_class.commands.items():
+            aliases = getattr(command, "alias", None)
+            if isinstance(aliases, str):
+                aliases = [aliases]
+
+            if aliases:
+                for alias in aliases:
+                    self.aliases[alias] = name
+
         if module_class.__origin__ == "<core>":
             module_class.loader = self
 
         self.modules.append(module_class)
+
+    def lookup(self, name: str):
+        return next(
+            (
+                module
+                for module in self.modules
+                if module.__class__.__name__ == name
+                or getattr(module, "name", "") == name
+            ),
+            None,
+        )

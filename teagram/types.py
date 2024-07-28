@@ -10,6 +10,10 @@ def get_methods(cls, end: str, attribute: str = ""):
     }
 
 
+class ModuleException(Exception):
+    pass
+
+
 class Module:
     MIN_VERSION = "BETA"
     MODULE_VERSION = "Not specified"

@@ -70,7 +70,8 @@ class Dispatcher:
 
             await utils.answer(
                 message,
-                f"<b>Message</b>: <code>{message.text}</code>\nError:\n<code>{error}</code>",
+                f"<b>❌ An unexpected error occurred while executing command</b>: <code>{message.text}</code>\n"
+                f"<b>❔ Error:</b>\n<code>{error}</code>",
             )
 
         return message
