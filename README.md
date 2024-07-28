@@ -1,7 +1,11 @@
 [![Teagram](https://github.com/MuRuLOSE/teagram-assets/raw/main/teagram_banner2v1.png)](https://t.me/UBteagram)
 
 <p align="center">
-    Teagram-v2 based on perfomance and <a href="https://github.com/KurimuzonAkuma/pyrogram">last telegram layers</a>
+    <img src="https://img.shields.io/github/languages/code-size/itzlayz/teagram-v2?style=for-the-badge">
+</p>
+
+<p align="center">
+    Teagram-v2 based on performance and <a href="https://github.com/KurimuzonAkuma/pyrogram">last telegram layers</a>
 </p>
 
 <h1>💻 Install</h1>
