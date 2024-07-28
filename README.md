@@ -17,5 +17,5 @@ git clone https://github.com/itzlayz/teagram-v2 && cd teagram-v2 && pip install 
 
 <h1>✨ Advantages:</h1>
 <ul>
-    <li>High perfomance</li>
+    <li>High performance</li>
 </ul>
