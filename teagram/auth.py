@@ -89,16 +89,17 @@ class Authorization:
             except errors.BadRequest:
                 print("Bad request, retrying...")
 
-    async def enter_phone_code(self, phone, phone_code_hash):
-        code = input("Enter confirmation code: ")
+    async def enter_phone_code(self, phone, phone_code_hash, code = None):
+        if not code:
+            code = input("Enter confirmation code: ")
 
         try:
             return await self.client.sign_in(
-                phone, code, phone_code_hash=phone_code_hash
+                phone, phone_code_hash, code
             )
         except errors.SessionPasswordNeeded:
             await self.get_password()
-            return await self.enter_phone_code(phone, phone_code_hash)
+            return await self.enter_phone_code(phone, phone_code_hash, code)
 
     async def generate_qrcode(self, qrcode_token):
         from qrcode.main import QRCode
