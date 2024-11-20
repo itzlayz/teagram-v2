@@ -35,7 +35,7 @@ def kill(force: bool = False):
 
 
 def restart(*_):
-    print("Restarting...")
+    logging.info("Restarting...")
 
     os.execl(
         sys.executable,

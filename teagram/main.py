@@ -7,7 +7,18 @@ from .utils import clear_console
 from pyrogram.methods.utilities.idle import idle
 
 import asyncio
+import logging
 import sys
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+logging.getLogger().setLevel(logging.INFO)
+logging.getLogger("pyrogram").setLevel(logging.ERROR)
+logging.getLogger("aiogram").setLevel(logging.ERROR)
 
 
 class Main:
@@ -25,7 +36,7 @@ class Main:
                 asyncio.run(self.main())
 
         except ImportError:
-            print("Uvloop not found, it may cause perfomance leaks")
+            logging.info("Uvloop not found, it may cause perfomance leaks")
             asyncio.run(self.main())
 
     async def main(self):
@@ -41,12 +52,12 @@ class Main:
         await client.connect()
         await client.initialize()
 
-        loader = Loader(client, database)
-        await loader.load()
-
         if not client.me:
             me = await client.get_me()
             client.me = me
 
+        loader = Loader(client, database)
+        await loader.load()
+
         await idle()
-        print("Shutdown...")
+        logging.info("Shutdown...")

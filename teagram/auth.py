@@ -1,7 +1,13 @@
 import asyncio
+import logging
+
+from .client import CustomClient
+
+from qrcode.main import QRCode
+from base64 import urlsafe_b64encode
 
 from configparser import ConfigParser, NoSectionError, NoOptionError
-from pyrogram import Client, errors
+from pyrogram import errors
 
 from pyrogram.raw.functions.account.get_password import GetPassword
 from pyrogram.raw.functions.auth.export_login_token import ExportLoginToken
@@ -15,7 +21,7 @@ from . import __version__
 class Authorization:
     def __init__(self, test_mode: bool = False, qr_code: bool = True):
         api_id, api_hash = self.get_api_tokens()
-        self.client = Client(
+        self.client = CustomClient(
             "../teagram_v2",
             api_id=api_id,
             api_hash=api_hash,
@@ -67,9 +73,9 @@ class Authorization:
                 await self.client.check_password(twofa)
                 break
             except errors.PasswordHashInvalid:
-                print("Invalid password, retrying...")
+                logging.error("Invalid password, retrying...")
             except errors.FloodWait as err:
-                print(f"Got floodwait retry after {err.value} seconds")
+                logging.error(f"Got floodwait retry after {err.value} seconds")
 
         return twofa
 
@@ -79,32 +85,27 @@ class Authorization:
                 phone = input("Enter phone number: ")
                 return (phone, (await self.client.send_code(phone)).phone_code_hash)
             except errors.PhoneNumberInvalid:
-                print("Invalid phone number, retrying...")
+                logging.error("Invalid phone number, retrying...")
             except errors.PhoneNumberFlood as error:
-                print(f"Phone floodwait, retry after: {error.value}")
+                logging.error(f"Phone floodwait, retry after: {error.value}")
             except errors.PhoneNumberBanned:
-                print("Phone number banned, retrying...")
+                logging.error("Phone number banned, retrying...")
             except errors.PhoneNumberOccupied:
-                print("Phone number occupied, retrying...")
+                logging.error("Phone number occupied, retrying...")
             except errors.BadRequest:
-                print("Bad request, retrying...")
+                logging.error("Bad request, retrying...")
 
-    async def enter_phone_code(self, phone, phone_code_hash, code = None):
+    async def enter_phone_code(self, phone, phone_code_hash, code=None):
         if not code:
             code = input("Enter confirmation code: ")
 
         try:
-            return await self.client.sign_in(
-                phone, phone_code_hash, code
-            )
+            return await self.client.sign_in(phone, phone_code_hash, code)
         except errors.SessionPasswordNeeded:
             await self.get_password()
             return await self.enter_phone_code(phone, phone_code_hash, code)
 
     async def generate_qrcode(self, qrcode_token):
-        from qrcode.main import QRCode
-        from base64 import urlsafe_b64encode
-
         qrcode = QRCode(error_correction=1)
         qrcode.clear()
         qrcode.add_data(
@@ -121,14 +122,15 @@ class Authorization:
         try:
             me = await self.client.get_me()
         except errors.SessionRevoked:
-            print("Session was terminated, deleting session...")
+            logging.error("Session was terminated, deleting session...")
+
             from os import remove
             from sys import exit
 
             try:
                 remove("teagram_v2.session")
             except PermissionError:
-                print(
+                logging.info(
                     "No permissions, please remove session file by yourself and retry.."
                 )
 
@@ -142,7 +144,7 @@ class Authorization:
                 phone, phone_hash = await self.get_phone_code()
                 await self.enter_phone_code(phone, phone_hash)
             else:
-                print("Logining with qrcode (--no-qrcode/-nqr to disable)")
+                logging.info("Logining with qrcode (--no-qrcode/-nqr to disable)")
 
                 async def check_qr_status():
                     while True:
@@ -155,7 +157,7 @@ class Authorization:
                                 )
                             )
                             if isinstance(qr_token, LoginTokenSuccess):
-                                print("Success!")
+                                logging.info("Success!")
                                 return True
 
                             await asyncio.sleep(1)
@@ -173,8 +175,8 @@ class Authorization:
                             )
                         )
                         if isinstance(qr_token, LoginToken):
-                            print("Scan the QRCode below: ")
-                            print(
+                            logging.info("Scan the QRCode below: ")
+                            logging.info(
                                 "Settings > Privacy and Security > Active Sessions > Scan QR Code"
                             )
 

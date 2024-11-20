@@ -1,4 +1,11 @@
+import typing
+import types
+
+from .client import CustomClient
+from .database import Database
+
 from importlib.abc import SourceLoader
+from abc import ABC, abstractmethod
 
 
 def get_methods(cls, end: str, attribute: str = ""):
@@ -10,6 +17,37 @@ def get_methods(cls, end: str, attribute: str = ""):
     }
 
 
+class ABCLoader(ABC):
+    def __init__(self, client: CustomClient, database: Database):
+        self.client: CustomClient
+        self.database: Database
+
+        self.modules: typing.List[Module]
+        self.core_modules: typing.Final[typing.List[str]]
+
+        self.commands: typing.Dict[str, types.FunctionType]
+        self.aliases: typing.Dict[str, types.FunctionType]
+
+        self.raw_handlers: typing.List[types.FunctionType]
+        self.watchers: typing.List[types.FunctionType]
+
+        self.inline_handlers: typing.List[types.FunctionType]
+        self.callback_handlers: typing.List[types.FunctionType]
+
+        self.dispatcher: typing.Any
+    
+    @abstractmethod
+    async def load_module(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    async def unload_module(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def prepare_module(self, *args, **kwargs):
+        pass
+        
 class ModuleException(Exception):
     pass
 

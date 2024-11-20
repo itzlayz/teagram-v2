@@ -9,6 +9,7 @@ from importlib.machinery import ModuleSpec
 from importlib.util import spec_from_file_location, module_from_spec
 
 from pyrogram.handlers.handler import Handler
+from .types import ABCLoader
 
 from pathlib import Path
 from typing import Final, List
@@ -17,6 +18,8 @@ from .utils import BASE_PATH
 
 from .dispatcher import Dispatcher
 from .types import Module, StringLoader, ModuleException
+
+from .inline import InlineDispatcher
 
 MODULES_PATH = Path(os.path.join(BASE_PATH, "teagram/modules"))
 CUSTOM_MODULES_PATH = Path(os.path.join(BASE_PATH, "teagram/custom_modules"))
@@ -80,7 +83,7 @@ def callback_handler(custom_filters=None, *args, **kwargs):
     return decorator
 
 
-class Loader:
+class Loader(ABCLoader):
     def __init__(self, client, database):
         self.client = client
         self.database = database
@@ -104,18 +107,21 @@ class Loader:
         self.callback_handlers = []
 
         self.dispatcher = Dispatcher(client, self)
+        self.inline = InlineDispatcher(self)
 
     async def load(self):
         await self.load_modules()
-        await self.dispatcher.load()
 
-        print("Loaded!")
+        await self.dispatcher.load()
+        self.bot = await self.inline.load()
+
+        logging.info("Loaded!")
 
     async def load_modules(self):
         for path in MODULES_PATH.glob("*.py"):
             module_name = f"teagram.modules.{path.stem}"
             if path.stem.lower() not in self.core_modules:
-                print(
+                logging.info(
                     f"Found custom module in core modules, please delete it to hide this message ({path})"
                 )
                 continue
@@ -160,8 +166,12 @@ class Loader:
                 value()
                 for value in vars(module).values()
                 if inspect.isclass(value) and issubclass(value, Module)
-            )
+            ),
+            None,
         )
+
+        if not module_class:
+            raise ModuleException("❌ Module class not found")
 
         module_class.__origin__ = origin
         name = getattr(module_class, "name", module_class.__class__.__name__)

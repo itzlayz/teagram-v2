@@ -1,11 +1,13 @@
 __pycache__
 *.pyc
-venv
+venv*
 virtual
-db.json
+
 .env
 *.session
+*.session-journal
 config.ini
-.vscode/settings.json
-teagram_v2.session-journal
+db.json
 database.json
+
+.vscode/settings.json

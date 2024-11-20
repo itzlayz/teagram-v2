@@ -83,7 +83,7 @@ def is_url(url: str):
 
 async def answer(
     message: Message,
-    data: typing.Union[str, FileLike],
+    content: typing.Union[str, FileLike],
     parse_mode: str = "HTML",
     **kwargs,
 ):
@@ -92,25 +92,25 @@ async def answer(
     parse_mode = normalize_parser(parse_mode)
     caption = kwargs.pop("caption", None)
 
-    if not data:
-        logging.error("Error, you didn't pass data")
+    if not content:
+        logging.error(f"Expected content got {content}")
         return
 
-    if data and not caption:
+    if content and not caption:
         if message.outgoing:
-            result = await message.edit(data, parse_mode=parse_mode, **kwargs)
+            result = await message.edit(content, parse_mode=parse_mode, **kwargs)
         else:
-            result = await message.reply(data, parse_mode=parse_mode, **kwargs)
+            result = await message.reply(content, parse_mode=parse_mode, **kwargs)
     elif caption:
-        if not isinstance(data, (IOBase, BytesIO, bytes)) and not is_url(data):
-            logging.error(f"Excepted `FileLike` got {type(data)}")
+        if not isinstance(content, (IOBase, BytesIO, bytes)) and not is_url(content):
+            logging.error(f"Expected `FileLike` got {type(content)}")
             return
 
-        if isinstance(data, bytes):
-            data = BytesIO(data)
+        if isinstance(content, bytes):
+            content = BytesIO(content)
 
         result = await message.reply_photo(
-            data, caption=caption, parse_mode=parse_mode, **kwargs
+            content, caption=caption, parse_mode=parse_mode, **kwargs
         )
         if message.outgoing:
             await message.delete()
@@ -123,7 +123,7 @@ def random_id(length: int = 10):
 
 
 def clear_console():
-    """Simulation of clear console, moves cursor to last line of command line. Working on every OS"""
+    """Simulation of clear console, moves cursor to last line of command line. Compatible with all systems"""
     print("\033[H\033[J", end="")
 
 

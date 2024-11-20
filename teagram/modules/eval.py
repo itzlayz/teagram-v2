@@ -49,7 +49,7 @@ class Evaluator(loader.Module):
         result = None
         try:
             result = await async_eval(args.strip(), env)
-            if callable(result):
+            if callable(result) and getattr(result, "stringify", None):
                 result = result.stringify()
         except Exception as error:
             result = str(error)
