@@ -24,7 +24,6 @@ class Database:
                         "teagram": {
                             "prefix": ["."],
                             "inline_token": None,
-                            "aliases": [],
                         },
                     },
                     file,
@@ -43,6 +42,7 @@ class Database:
     def set(self, section: str, key: str, value: JSONSerializable):
         if section not in self.data:
             self.data[section] = {}
+
         self.data[section][key] = value
         self._save()
 

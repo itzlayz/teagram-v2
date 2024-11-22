@@ -9,7 +9,6 @@ from importlib.machinery import ModuleSpec
 from importlib.util import spec_from_file_location, module_from_spec
 
 from pyrogram.handlers.handler import Handler
-from .types import ABCLoader
 
 from pathlib import Path
 from typing import Final, List
@@ -17,9 +16,10 @@ from typing import Final, List
 from .utils import BASE_PATH
 
 from .dispatcher import Dispatcher
-from .types import Module, StringLoader, ModuleException
+from .types import Module, StringLoader, ModuleException, ABCLoader
 
 from .inline import InlineDispatcher
+from .translator import Translator, ModuleTranslator
 
 MODULES_PATH = Path(os.path.join(BASE_PATH, "teagram/modules"))
 CUSTOM_MODULES_PATH = Path(os.path.join(BASE_PATH, "teagram/custom_modules"))
@@ -109,6 +109,8 @@ class Loader(ABCLoader):
         self.dispatcher = Dispatcher(client, self)
         self.inline = InlineDispatcher(self)
 
+        self.translator = Translator(self.database)
+
     async def load(self):
         await self.load_modules()
 
@@ -185,6 +187,8 @@ class Loader(ABCLoader):
             path.write_text(module_source, encoding="UTF-8")
 
         await module_class.on_load()
+
+        gc.collect()
         return module_class
 
     async def unload_module(self, module_name: str):
@@ -220,7 +224,6 @@ class Loader(ABCLoader):
                 k: v for k, v in self.aliases.items() if k not in module.commands.keys()
             }
 
-        gc.collect()
         return module.__class__.__name__
 
     def prepare_module(self, module_class: Module):
@@ -229,6 +232,13 @@ class Loader(ABCLoader):
         module_class.loader = self
 
         module_class.load_init()
+        module_class.translator = ModuleTranslator(
+            module_class.__class__.__name__.lower()
+            .replace("mod", "")
+            .replace("module", ""),
+            self.translator,
+            getattr(module_class, "strings", None),
+        )
 
         self.commands.update(module_class.commands)
         self.watchers.extend(module_class.watchers)

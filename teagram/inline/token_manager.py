@@ -112,7 +112,6 @@ class TokenManager:
                         for button in row:
                             if button.text.startswith("@teagram_v2_"):
                                 bot_username = button.text
-                                print(f"bot found {bot_username}")
                                 break
 
                             if button.text == "»":

@@ -1,11 +1,14 @@
 from pyrogram.types import Message
 
 from .. import loader, utils
+
+from ..translator import SUPPORTED_LANGUAGES
 from ..types import ModuleException
 
 from time import time
 
 import subprocess
+import logging
 
 import atexit
 import psutil
@@ -54,7 +57,7 @@ class Manager(loader.Module):
             message = await self.client.get_messages(data["chat"], data["id"])
 
             await utils.answer(
-                message, f"<b>✅ Successfuly restarted ({restart_time}s)</b>"
+                message, self.get("restart_success").format(restart_time)
             )
             self.database.pop("teagram", "restart_info")
 
@@ -80,7 +83,7 @@ class Manager(loader.Module):
                 check=True,
             )
         except subprocess.CalledProcessError:
-            print("Error during installing requirements.txt")
+            logging.error("Error during installing requirements.txt")
 
     async def load_module(
         self, code: str, save_file: bool = False, origin: str = "<string>"
@@ -98,13 +101,13 @@ class Manager(loader.Module):
 
     @loader.command()
     async def stop(self, message, args=None):
-        await utils.answer(message, "<b>⏳ Stopping teagram...</b>")
+        await utils.answer(message, self.get("stopping"))
 
         kill(True)
 
     @loader.command()
     async def restart(self, message):
-        message = await utils.answer(message, "<b>⏳ Restarting...</b>")
+        message = await utils.answer(message, self.get("restarting"))
         atexit.register(restart)
 
         self.database.set(
@@ -117,7 +120,7 @@ class Manager(loader.Module):
 
     @loader.command()
     async def update(self, message):
-        message = await utils.answer(message, "<b>❔ Checking for update...</b>")
+        message = await utils.answer(message, self.get("checking_updates"))
 
         try:
             repo = git.Repo(os.path.abspath("./.git"))
@@ -129,33 +132,28 @@ class Manager(loader.Module):
             ).hexsha
 
             if local_commit == remote_commit:
-                return await utils.answer(message, "<b>✅ Up to date</b>")
+                return await utils.answer(message, self.get("uptodate"))
 
             repo.git.pull()
             self.check_requirements(repo, remote_commit)
 
             await self.restart(message)
         except git.exc.GitCommandError as e:
-            return await utils.answer(
-                message, f"<b>❌ Update failed:</b> <code>{str(e)}</code>"
-            )
+            return await utils.answer(message, self.get("update_fail").format(e))
         except Exception as e:
-            return await utils.answer(
-                message,
-                f"<b>❌ An unexpected error occurred:</b> <code>{str(e)}</code>",
-            )
+            return await utils.answer(message, self.get("unexpected_error").format(e))
 
     @loader.command(alias="lm")
     async def loadmod(self, message: Message):
         reply = message.reply_to_message
-        no_module = "<b>❌ No module specified, reply to message with module</b>"
+        module_not_found = self.get("module_not_found")
 
         if not reply:
-            return await utils.answer(message, no_module)
+            return await utils.answer(message, module_not_found)
 
         file = reply.media
         if not file:
-            return await utils.answer(message, no_module)
+            return await utils.answer(message, module_not_found)
 
         path = await reply.download(in_memory=True)
         code = None
@@ -166,21 +164,17 @@ class Manager(loader.Module):
                     code = f.read()
             except Exception as error:
                 return await utils.answer(
-                    message,
-                    f"<b>❌ An unexpected error occurred</b> <code>{str(error)}</code>",
+                    message, self.get("unexpected_error").format(error)
                 )
         else:
             code = path.getvalue().decode()
 
         if not code:
-            return await utils.answer(message, "<b>❌ File empty or corrupted</b>")
+            return await utils.answer(message, self.get("empty_file"))
 
         try:
             module_name = await self.load_module(code)
-            await utils.answer(
-                message,
-                f"<b>✅ Successfully loaded <code>{module_name}</code> module</b>",
-            )
+            await utils.answer(message, self.get("load_success").format(module_name))
         except ModuleException as error:
             return await utils.answer(message, f"<b>{error}</b>")
 
@@ -188,18 +182,27 @@ class Manager(loader.Module):
     async def unloadmod(self, message, args):
         module = args.strip()
         if not self.loader.lookup(module):
-            return await utils.answer(message, "<b>❌ Module not found</b>")
+            return await utils.answer(message, self.get("module_not_found"))
 
         try:
             module_name = await self.loader.unload_module(module)
             if not module_name:
-                return await utils.answer(
-                    message, "<b>❌ Unexpected error occurred</b>"
-                )
+                return await utils.answer(message, self.get("unexpected_error"))
         except ModuleException as error:
             return await utils.answer(message, f"<b>{error}</b>")
 
-        await utils.answer(
-            message,
-            f"<b>✅ Successfully unloaded <code>{module_name}</code> module</b>",
-        )
+        await utils.answer(message, self.get("unload_success").format(module_name))
+
+    @loader.command()
+    async def setlang(self, message, args: str):
+        language = args.strip().lower()
+        if language not in SUPPORTED_LANGUAGES:
+            return await utils.answer(
+                message,
+                self.get("language_not_supported").format(
+                    ", ".join(SUPPORTED_LANGUAGES)
+                ),
+            )
+
+        self.loader.translator.language = language
+        await utils.answer(message, self.get("set_lang_success").format(language))

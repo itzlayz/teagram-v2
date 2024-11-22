@@ -1,7 +1,5 @@
 from .. import loader, utils
-
 import ast
-import gc
 
 
 def insert_returns(body):
@@ -53,15 +51,5 @@ class Evaluator(loader.Module):
                 result = result.stringify()
         except Exception as error:
             result = str(error)
-        finally:
-            gc.collect()
 
-        await utils.answer(
-            message,
-            (
-                "<b>🐍 Code:</b>\n"
-                f'<pre language="python">{args}</pre>\n'
-                "<b>✅ Result:</b>\n"
-                f"<code>{result}</code>\n"
-            ),
-        )
+        await utils.answer(message, self.get("result").format(args, result))

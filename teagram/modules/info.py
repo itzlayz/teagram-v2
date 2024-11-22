@@ -1,6 +1,7 @@
 from .. import loader, utils, __version__
 
 import psutil
+import time
 import os
 
 import asyncio
@@ -31,6 +32,7 @@ class Info(loader.Module):
     @loader.command()
     async def infocmd(self, message):
         ram = await get_ram()
+
         await utils.answer(
             message,
             (
@@ -40,3 +42,12 @@ class Info(loader.Module):
                 f"<b>💭 Version:</b> <code>{__version__}</code>"
             ),
         )
+
+    @loader.command()
+    async def pingcmd(self, message):
+        start_time = time.perf_counter_ns()
+        message = await utils.answer(message, "☕")
+
+        ping = round((time.perf_counter_ns() - start_time) / 10**6, 3)
+
+        await utils.answer(message, self.get("ping").format(ping))

@@ -5,7 +5,7 @@ class Help(loader.Module):
     @loader.command()
     async def helpcmd(self, message, args):
         modules = self.loader.modules
-        all_text = "<b>Teagram modules</b>\n"
+        all_text = self.get("modules")
 
         core = False
         if args and any([arg in args for arg in ("--core", "-c")]):

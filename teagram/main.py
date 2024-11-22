@@ -2,7 +2,6 @@ from .auth import Authorization
 from .loader import Loader
 
 from .database import Database
-from .utils import clear_console
 
 from pyrogram.methods.utilities.idle import idle
 
@@ -34,13 +33,13 @@ class Main:
             else:
                 uvloop.install()
                 asyncio.run(self.main())
-
         except ImportError:
             logging.info("Uvloop not found, it may cause perfomance leaks")
             asyncio.run(self.main())
 
     async def main(self):
-        clear_console()
+        if getattr(self.parser, "debug", False):
+            logging.getLogger().setLevel(logging.DEBUG)
 
         database = Database()
 

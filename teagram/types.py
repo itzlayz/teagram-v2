@@ -3,6 +3,7 @@ import types
 
 from .client import CustomClient
 from .database import Database
+from .translator import Translator, ModuleTranslator
 
 from importlib.abc import SourceLoader
 from abc import ABC, abstractmethod
@@ -35,7 +36,10 @@ class ABCLoader(ABC):
         self.callback_handlers: typing.List[types.FunctionType]
 
         self.dispatcher: typing.Any
-    
+        self.inline_dispatcher: typing.Any
+
+        self.translator: Translator
+
     @abstractmethod
     async def load_module(self, *args, **kwargs):
         pass
@@ -47,7 +51,8 @@ class ABCLoader(ABC):
     @abstractmethod
     def prepare_module(self, *args, **kwargs):
         pass
-        
+
+
 class ModuleException(Exception):
     pass
 
@@ -55,6 +60,11 @@ class ModuleException(Exception):
 class Module:
     MIN_VERSION = "BETA"
     MODULE_VERSION = "Not specified"
+
+    translator: ModuleTranslator
+
+    def get(self, key: str) -> typing.Optional[str]:
+        return self.translator.get(key)
 
     def load_init(self):
         self.commands = get_methods(self, "cmd", "is_command")

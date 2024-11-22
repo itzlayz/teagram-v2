@@ -27,9 +27,7 @@ class Stream:
         )
         self.command = command
 
-        await self.message.edit(
-            f"⏳ <b>Running command</b>:\n<code>{self.command}</code>"
-        )
+        await self.message.edit(self.get("running_command").format(self.command))
 
         stdout_task = asyncio.create_task(
             self._read_stream(self.process.stdout, "STDOUT")
@@ -64,8 +62,8 @@ class Stream:
         if current_time - self.last_update >= self.UPDATE_INTERVAL:
             self.last_update = current_time
             text = (
-                f"<b>🖥️ Command:</b>\n<code>{self.command}</code>\n\n"
-                f"<b>🖥️ STDOUT:</b>\n<code>{self.stdout}</code>\n"
+                self.get("command").format(self.command)
+                + f"<b>🖥️ STDOUT:</b>\n<code>{self.stdout}</code>\n"
             )
             if self.stderr:
                 text += f"<b>❌ STDERR:</b>\n<code>{self.stderr}</code>"
@@ -78,9 +76,9 @@ class Stream:
             await self.process.wait()
 
             text = (
-                "<b>❌ Terminated</b>\n"
-                f"<b>🖥️ Command:</b>\n<code>{self.command}</code>\n\n"
-                f"<b>🖥️ STDOUT:</b>\n<code>{self.stdout}</code>\n"
+                self.get("terminated")
+                + self.get("command").format(self.command)
+                + f"<b>🖥️ STDOUT:</b>\n<code>{self.stdout}</code>\n"
             )
 
             if self.stderr:
@@ -124,9 +122,7 @@ class Terminal(loader.Module):
         )
 
         if not reply or not terminal:
-            return await utils.answer(
-                message, "<b>❔ Reply to message with running terminal</b>"
-            )
+            return await utils.answer(message, self.get("no_reply"))
 
         await terminal.terminate()
         if message.outgoing:
