@@ -125,12 +125,14 @@ class Manager(loader.Module):
         message = await utils.answer(message, self.get("checking_updates"))
 
         try:
-            repo = git.Repo(os.path.abspath("./.git"))
+            repo = git.Repo(os.path.abspath("."))
             branch = repo.active_branch.name
+
+            repo.remotes.origin.fetch()
 
             local_commit = repo.head.commit.hexsha
             remote_commit = next(
-                git.Repo().iter_commits(f"origin/{branch}", max_count=1)
+                repo.iter_commits(f"origin/{branch}", max_count=1)
             ).hexsha
 
             if local_commit == remote_commit:
