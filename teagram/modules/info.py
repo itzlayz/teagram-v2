@@ -29,6 +29,8 @@ async def get_ram() -> float:
 
 
 class Info(loader.Module):
+    strings = {"name": "Info"}
+
     @loader.command()
     async def infocmd(self, message):
         ram = await get_ram()

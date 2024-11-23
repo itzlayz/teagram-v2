@@ -233,9 +233,7 @@ class Loader(ABCLoader):
 
         module_class.load_init()
         module_class.translator = ModuleTranslator(
-            module_class.__class__.__name__.lower()
-            .replace("mod", "")
-            .replace("module", ""),
+            module_class,
             self.translator,
             getattr(module_class, "strings", None),
         )

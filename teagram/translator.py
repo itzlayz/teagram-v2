@@ -51,22 +51,29 @@ class Translator:
 class ModuleTranslator:
     def __init__(
         self,
-        module_name: str,
-        translator: Translator,
+        module_class,
+        translator: "Translator",
         module_translations: typing.Optional[typing.Dict[str, str]] = None,
     ):
-        self.module_name = module_name
-        self.translator = translator
+        self.module_name = (
+            module_class.__class__.__name__.lower()
+            .replace("mod", "")
+            .replace("module", "")
+        )
+
         self.module_translations = module_translations or {}
+        if not translator.translations.get(self.module_name):
+            self.module_name = self.module_translations.get(
+                "name", self.module_name
+            ).lower()
+
+        self.translator = translator
 
     def __getitem__(self, key: str) -> typing.Optional[str]:
         translations = self.translator.translations.get(
-            self.module_name,
-            self.translator.translations.get(
-                self.module_name.lower(), self.module_translations
-            ),
+            self.module_name, self.module_translations
         )
         return translations.get(key) if translations else None
 
     def get(self, key: str) -> typing.Optional[str]:
-        return self.__getitem__(key)
+        return self[key]

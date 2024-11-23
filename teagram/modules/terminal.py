@@ -11,7 +11,9 @@ class Stream:
     BUFFER = 8192
     UPDATE_INTERVAL = 0.25
 
-    def __init__(self, message: Message):
+    def __init__(self, message: Message, get):
+        self.get = get  # brainrot
+
         self.message = message
         self.last_update = time.time_ns()
 
@@ -88,13 +90,15 @@ class Stream:
 
 
 class Terminal(loader.Module):
+    strings = {"name": "Terminal"}
+
     def __init__(self):
         self.terminals: List[Stream] = []
 
     @loader.command(alias=["terminal", "t"])
     async def bash(self, message: Message, args: str):
         command = args.strip()
-        terminal = Stream(message)
+        terminal = Stream(message, self.get)
 
         self.terminals.append(terminal)
         await terminal.run(command)

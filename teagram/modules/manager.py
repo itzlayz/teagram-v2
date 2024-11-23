@@ -50,6 +50,8 @@ def restart(*_):
 
 
 class Manager(loader.Module):
+    strings = {"name": "Manager"}
+
     async def on_load(self):
         data = self.database.get("teagram", "restart_info", None)
         if data:

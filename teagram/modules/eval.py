@@ -35,6 +35,8 @@ async def async_eval(code: str, env: dict):
 
 
 class Evaluator(loader.Module):
+    strings = {"name": "Eval"}
+
     @loader.command(alias="e")
     async def eval(self, message, args):
         env = {

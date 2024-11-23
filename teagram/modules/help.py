@@ -2,6 +2,8 @@ from .. import loader, utils
 
 
 class Help(loader.Module):
+    strings = {"name": "Help"}
+
     @loader.command()
     async def helpcmd(self, message, args):
         modules = self.loader.modules
