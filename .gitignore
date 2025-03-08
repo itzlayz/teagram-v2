@@ -11,3 +11,4 @@ db.json
 database.json
 
 .vscode/settings.json
+*.log
