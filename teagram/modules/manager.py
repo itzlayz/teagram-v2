@@ -149,6 +149,7 @@ class Manager(loader.Module):
 
     @loader.command(alias="dev")
     async def dev_branch(self, message):
+        branch_name = ""
         try:
             repo = git.Repo(os.path.abspath("."))
             repo.remotes.origin.fetch()
@@ -171,7 +172,9 @@ class Manager(loader.Module):
 
             await self.restart(message)
         except git.exc.GitCommandError as e:
-            return await utils.answer(message, self.get("changing_fail").format(e))
+            return await utils.answer(
+                message, self.get("changing_fail").format(branch_name, e)
+            )
         except Exception as e:
             return await utils.answer(message, self.get("unexpected_error").format(e))
 
