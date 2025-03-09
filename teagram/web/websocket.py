@@ -8,7 +8,9 @@ from configparser import ConfigParser, NoSectionError, NoOptionError
 from aiohttp import web, WSMsgType
 
 from ..client import CustomClient
+
 from pyrogram import errors
+from pyrogram.types import User
 
 from pyrogram.qrlogin import QRLogin
 from pyrogram.raw.functions.account.get_password import GetPassword
@@ -146,8 +148,8 @@ class WebsocketServer:
             app_version=__version__,
             test_mode=self.test_mode,
         )
-        await self.client.connect()
 
+        await self.client.connect()
         await self.handle_qr_authorization()
 
     async def handle_phone_number(self, message_data: dict):
@@ -231,26 +233,38 @@ class WebsocketServer:
             )
 
     async def handle_qr_authorization(self):
-        self.qr_login = QRLogin(self.client, [])
-        await self.qr_login.recreate()
+        if not self.qr_login and not self.qr_wait:
+            self.qr_login = QRLogin(self.client, [])
+            await self.qr_login.recreate()
 
-        self.qr_wait = asyncio.create_task(self.wait_qr_login())
+            self.qr_wait = asyncio.create_task(self.wait_qr_login())
+
+    async def wait_qr_login(self):
+        state = False
+        last_url = self.qr_login.url
 
         await self.connection.send_json(
             {"type": "qr_login", "content": self.qr_login.url}
         )
 
-    async def wait_qr_login(self):
-        state = False
-
         while not state:
             try:
                 try:
-                    state = await self.qr_login.wait(8)
+                    state = await self.qr_login.wait(10)
+
+                    if isinstance(state, User):
+                        await self.stop()
                 except asyncio.TimeoutError:
-                    await self.qr_login.recreate()
+                    current_url = self.qr_login.url
+                    while last_url == current_url:
+                        await asyncio.sleep(0.5)
+
+                        await self.qr_login.recreate()
+                        current_url = self.qr_login.url
+
+                    last_url = current_url
                     await self.connection.send_json(
-                        {"type": "qr_login", "content": self.qr_login.url}
+                        {"type": "qr_login", "content": current_url}
                     )
             except errors.SessionPasswordNeeded:
                 return await self.connection.send_json(

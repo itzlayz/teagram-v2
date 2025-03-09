@@ -13,6 +13,8 @@ import logging
 import atexit
 import psutil
 
+import aiohttp
+
 import sys
 import os
 
@@ -233,6 +235,24 @@ class Manager(loader.Module):
             return await utils.answer(message, f"<b>{error}</b>")
 
         await utils.answer(message, self.get("unload_success").format(module_name))
+
+    @loader.command(alias="dlm")
+    async def downloadmod(self, message, args):
+        url = args.strip()
+        if not url:
+            return await utils.answer(message, self.get("module_not_found"))
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    module_code = await response.text()
+                    if not module_code:
+                        raise Exception()
+        except Exception:
+            return await utils.answer(message, self.get("unexpected_error"))
+
+        module_name = await self.load_module(module_code)
+        await utils.answer(message, self.get("load_success").format(module_name))
 
     @loader.command()
     async def setlang(self, message, args: str):
