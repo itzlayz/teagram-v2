@@ -16,13 +16,15 @@ logging.basicConfig(
 )
 
 logging.getLogger().setLevel(logging.INFO)
+
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
 logging.getLogger("aiogram").setLevel(logging.ERROR)
+logging.getLogger("aiohttp.access").setLevel(logging.ERROR)
 
 
 class Main:
-    def __init__(self, parser):
-        self.parser = parser
+    def __init__(self, arguments):
+        self.arguments = arguments
 
     def start(self):
         try:
@@ -34,18 +36,20 @@ class Main:
                 uvloop.install()
                 asyncio.run(self.main())
         except ImportError:
-            logging.info("Uvloop not found, it may cause perfomance leaks")
+            logging.info("Uvloop not installed, it may cause perfomance leaks")
             asyncio.run(self.main())
 
     async def main(self):
-        if getattr(self.parser, "debug", False):
+        if getattr(self.arguments, "debug", False):
             logging.getLogger().setLevel(logging.DEBUG)
 
         database = Database()
 
         client = await Authorization(
-            getattr(self.parser, "test_mode", False),
-            getattr(self.parser, "no_qr", False),
+            getattr(self.arguments, "test_mode", False),
+            getattr(self.arguments, "no_qr", False),
+            getattr(self.arguments, "no_web", False),
+            getattr(self.arguments, "port", 0),
         ).authorize()
 
         await client.connect()

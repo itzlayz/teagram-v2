@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Teagram-v2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <link rel="stylesheet" href="static/styles.css" />
+</head>
+<body>
+  <div class="main-container" id="login-container">
+    <div id="tokens-section" class="window">
+      <h1 data-key="enter_tokens_title">Enter API Tokens</h1>
+      <input type="text" id="api_id" data-placeholder-key="api_id_placeholder" placeholder="API ID" />
+      <input type="text" id="api_hash" data-placeholder-key="api_hash_placeholder" placeholder="API HASH" />
+      <button id="tokens-btn" data-button-key="submit_tokens">Submit Tokens</button>
+    </div>
+
+    <div id="qr-section" class="window">
+      <h1 data-key="qr_title">Log in to Telegram by QR Code</h1>
+      <div id="qr-wrapper">
+        
+        <div id="qr-container">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      <ol class="instructions">
+        <li data-key="instruction1">Open Telegram on your phone</li>
+        <li data-key="instruction2">Go to Settings &gt; Devices &gt; Link Desktop Device</li>
+        <li data-key="instruction3">Point your phone at this screen to confirm login</li>
+      </ol>
+
+      <a href="#" id="to-phone" class="switch-link" data-button-key="login_by_phone">LOG IN BY PHONE NUMBER</a>
+      <a href="#" id="lang-switch" class="switch-link" data-button-key="lang_switch">Switch to Russian</a>
+    </div>
+
+    <div id="phone-section" class="window">
+      <h1 data-key="phone_login_title">Log in by Phone</h1>
+      <div id="phone-step1">
+        <input type="text" id="phone_number" data-placeholder-key="phone_number_placeholder" placeholder="Phone number" />
+        <button id="phone-number-btn" data-button-key="submit_phone">Submit Phone</button>
+      </div>
+      <div id="phone-step2" style="display: none;">
+        <input type="text" id="phone_code" data-placeholder-key="phone_code_placeholder" placeholder="Confirmation code" />
+        <button id="phone-code-btn" data-button-key="submit_code">Submit Code</button>
+      </div>
+      <div style="margin-top: 20px;">
+        <a href="#" id="to-qr" class="switch-link" data-button-key="back_to_qr">Back to QR Code</a>
+      </div>
+    </div>
+
+    <div id="password-section" class="window">
+      <h1 data-key="two_factor_title">Two-Factor Authentication</h1>
+      <input type="password" id="login_password" data-placeholder-key="password_placeholder" placeholder="Password" />
+      <button id="password-btn" data-button-key="submit_password">Submit Password</button>
+    </div>
+
+    <div id="message"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <script src="static/main.js"></script>
+</body>
+</html>

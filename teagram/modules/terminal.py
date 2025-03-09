@@ -65,10 +65,10 @@ class Stream:
             self.last_update = current_time
             text = (
                 self.get("command").format(self.command)
-                + f"<b>🖥️ STDOUT:</b>\n<code>{self.stdout}</code>\n"
+                + f'<b>🖥️ STDOUT:</b>\n<pre language="shell">{self.stdout}</pre>\n'
             )
             if self.stderr:
-                text += f"<b>❌ STDERR:</b>\n<code>{self.stderr}</code>"
+                text += f"<b>❌ STDERR:</b>\n<pre>{self.stderr}</pre>"
 
             self.message = await utils.answer(self.message, text)
 
@@ -80,11 +80,11 @@ class Stream:
             text = (
                 self.get("terminated")
                 + self.get("command").format(self.command)
-                + f"<b>🖥️ STDOUT:</b>\n<code>{self.stdout}</code>\n"
+                + f'<b>🖥️ STDOUT:</b>\n<pre language="shell">{self.stdout}</pre>\n'
             )
 
             if self.stderr:
-                text += f"<b>❌ STDERR:</b>\n<code>{self.stderr}</code>"
+                text += f"<b>❌ STDERR:</b>\n<pre>{self.stderr}</pre>"
 
             await utils.answer(self.message, text)
 

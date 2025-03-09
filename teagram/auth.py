@@ -1,26 +1,46 @@
-import asyncio
 import logging
 
-from .client import CustomClient
-
-from qrcode.main import QRCode
-from base64 import urlsafe_b64encode
+from os import remove
+from sys import exit
 
 from configparser import ConfigParser, NoSectionError, NoOptionError
+
+from qrcode.main import QRCode
+
 from pyrogram import errors
-
 from pyrogram.raw.functions.account.get_password import GetPassword
-from pyrogram.raw.functions.auth.export_login_token import ExportLoginToken
 
-from pyrogram.raw.types.auth.login_token import LoginToken
-from pyrogram.raw.types.auth.login_token_success import LoginTokenSuccess
+from .web import WebCore
+from .client import CustomClient
 
 from . import __version__
 
+logger = logging.getLogger(__name__)
+
+
+def get_port():
+    import socket
+
+    for port in range(1024, 65535 + 1):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("", port))
+
+                return port
+            except OSError:
+                continue
+
 
 class Authorization:
-    def __init__(self, test_mode: bool = False, qr_code: bool = True):
-        api_id, api_hash = self.get_api_tokens()
+    def __init__(
+        self,
+        test_mode: bool,
+        no_qr: bool,
+        no_web: bool,
+        port: int,
+    ):
+        api_id, api_hash = self.get_api_tokens(not no_web)
+
         self.client = CustomClient(
             "../teagram_v2",
             api_id=api_id,
@@ -29,9 +49,13 @@ class Authorization:
             app_version=__version__,
             test_mode=test_mode,
         )
-        self.qr_code = qr_code
 
-    def get_api_tokens(self):
+        self.no_qr = no_qr
+        self.no_web = no_web
+
+        self.port = port
+
+    def get_api_tokens(self, no_prompt: bool):
         self.config = ConfigParser()
         self.config.read("./config.ini")
 
@@ -45,21 +69,24 @@ class Authorization:
             if not self.config.get("api_tokens", "api_id") or not self.config.get(
                 "api_tokens", "api_hash"
             ):
+                if no_prompt:
+                    return 0, "_"
+
                 api_prompt()
         except (NoSectionError, NoOptionError):
+            if no_prompt:
+                return 0, "_"
+
             api_prompt()
 
         with open("./config.ini", "w") as file:
             self.config.write(file)
 
-        api_id = 0
-        api_hash = "_"
-
         try:
             api_id = self.config.get("api_tokens", "api_id")
             api_hash = self.config.get("api_tokens", "api_hash")
         except Exception:
-            pass
+            api_id, api_hash = 0, "_"
 
         return api_id, api_hash
 
@@ -67,128 +94,118 @@ class Authorization:
         from getpass import getpass
 
         await self.client.invoke(GetPassword())
+
         while True:
             twofa = getpass("Enter 2FA password: ")
             try:
                 await self.client.check_password(twofa)
-                break
+                return twofa
             except errors.PasswordHashInvalid:
-                logging.error("Invalid password, retrying...")
+                logger.error("Invalid password, retrying...")
             except errors.FloodWait as err:
-                logging.error(f"Got floodwait retry after {err.value} seconds")
-
-        return twofa
+                logger.error(f"FloodWait error; retry after {err.value} seconds")
 
     async def get_phone_code(self):
         while True:
             try:
                 phone = input("Enter phone number: ")
-                return (phone, (await self.client.send_code(phone)).phone_code_hash)
+                result = await self.client.send_code(phone)
+                return phone, result.phone_code_hash
             except errors.PhoneNumberInvalid:
-                logging.error("Invalid phone number, retrying...")
+                logger.error("Invalid phone number, retrying...")
             except errors.PhoneNumberFlood as error:
-                logging.error(f"Phone floodwait, retry after: {error.value}")
+                logger.error(f"Phone floodwait; retry after: {error.value} seconds")
             except errors.PhoneNumberBanned:
-                logging.error("Phone number banned, retrying...")
+                logger.error("Phone number banned, retrying...")
             except errors.PhoneNumberOccupied:
-                logging.error("Phone number occupied, retrying...")
+                logger.error("Phone number already in use, retrying...")
             except errors.BadRequest:
-                logging.error("Bad request, retrying...")
+                logger.error("Bad request, retrying...")
 
     async def enter_phone_code(self, phone, phone_code_hash, code=None):
         if not code:
             code = input("Enter confirmation code: ")
-
         try:
             return await self.client.sign_in(phone, phone_code_hash, code)
         except errors.SessionPasswordNeeded:
             await self.get_password()
             return await self.enter_phone_code(phone, phone_code_hash, code)
 
-    async def generate_qrcode(self, qrcode_token):
-        qrcode = QRCode(error_correction=1)
-        qrcode.clear()
-        qrcode.add_data(
-            "tg://login?token={}".format(
-                urlsafe_b64encode(qrcode_token.token).decode("utf-8").rstrip("=")
-            )
-        )
-        qrcode.make()
-        qrcode.print_ascii()
+    async def generate_qrcode_from_url(self, url: str):
+        qr = QRCode(error_correction=1)
+        qr.clear()
+
+        qr.add_data(url)
+
+        qr.make()
+        qr.print_ascii()
 
     async def authorize(self):
-        await self.client.connect()
+        if await self._is_authorized():
+            return self.client
 
+        if not self.no_web:
+            return await self._web_authorize()
+        elif not self.no_qr:
+            return await self._qr_authorize()
+        else:
+            return await self._phone_authorize()
+
+    async def _is_authorized(self):
         try:
+            await self.client.connect()
+
             me = await self.client.get_me()
+            return me is not None
         except errors.SessionRevoked:
-            logging.error("Session was terminated, deleting session...")
-
-            from os import remove
-            from sys import exit
-
+            logger.error("Session revoked, deleting session file.")
             try:
                 remove("teagram_v2.session")
             except PermissionError:
-                logging.info(
-                    "No permissions, please remove session file by yourself and retry.."
+                logger.info(
+                    "No permission to delete session file, please remove manually."
                 )
+            exit(64)
+        except (errors.AuthKeyUnregistered, AttributeError):
+            return False
+        finally:
+            try:
+                await self.client.disconnect()
+            except ConnectionError:
+                pass
 
-            await self.client.disconnect()
-            return exit(64)
-        except errors.AuthKeyUnregistered:
-            me = None
+    async def _web_authorize(self):
+        self.port = self.port or get_port()
 
-        if not me:
-            if not self.qr_code:
-                phone, phone_hash = await self.get_phone_code()
-                await self.enter_phone_code(phone, phone_hash)
-            else:
-                logging.info("Logining with qrcode (--no-qrcode/-nqr to disable)")
+        web = WebCore(port=self.port, test_mode=self.client.test_mode)
 
-                async def check_qr_status():
-                    while True:
-                        try:
-                            qr_token = await self.client.invoke(
-                                ExportLoginToken(
-                                    api_id=self.client.api_id,
-                                    api_hash=self.client.api_hash,
-                                    except_ids=[],
-                                )
-                            )
-                            if isinstance(qr_token, LoginTokenSuccess):
-                                logging.info("Success!")
-                                return True
+        await web.run()
+        return web.client
 
-                            await asyncio.sleep(1)
-                        except errors.SessionPasswordNeeded:
-                            await self.get_password()
-                            return True
+    async def _qr_authorize(self):
+        from pyrogram.qrlogin import QRLogin
 
-                async def refresh_qr_code():
-                    while True:
-                        qr_token = await self.client.invoke(
-                            ExportLoginToken(
-                                api_id=self.client.api_id,
-                                api_hash=self.client.api_hash,
-                                except_ids=[],
-                            )
-                        )
-                        if isinstance(qr_token, LoginToken):
-                            logging.info("Scan the QRCode below: ")
-                            logging.info(
-                                "Settings > Privacy and Security > Active Sessions > Scan QR Code"
-                            )
+        qr_login = QRLogin(self.client)
+        await qr_login.recreate()
 
-                            await self.generate_qrcode(qr_token)
+        logger.info("Scan the QR code below:")
+        logger.info("Settings > Privacy and Security > Active Sessions > Scan QR Code")
+        await self.generate_qrcode_from_url(qr_login.url)
 
-                        await asyncio.sleep(30)
-
-                status_task = asyncio.create_task(check_qr_status())
-                refresh_task = asyncio.create_task(refresh_qr_code())
-
-                await status_task
-                refresh_task.cancel()
+        try:
+            user = await qr_login.wait()
+            logger.info(f"QR login successful for user: {user.first_name}")
+        except Exception as e:
+            logger.error(f"QR login failed: {e}")
+            raise e
 
         await self.client.disconnect()
+        return self.client
+
+    async def _phone_authorize(self):
+        phone, phone_hash = await self.get_phone_code()
+
+        await self.enter_phone_code(phone, phone_hash)
+        await self.client.disconnect()
+
         return self.client

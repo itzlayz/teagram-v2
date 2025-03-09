@@ -2,7 +2,7 @@ git+https://github.com/KurimuzonAkuma/pyrogram.git
 qrcode==7.4.2
 psutil>=6.0.0
 ujson>=5.10.0
-tgcrypto>=1.2.5
 gitpython==3.1.43
 aiogram==2.25.1
 pyyaml>=6.0.2
+websockets>=15.0.1
