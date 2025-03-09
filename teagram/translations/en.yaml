@@ -12,6 +12,13 @@ manager:
   unload_success: "<b>✅ Successfully unloaded <code>{}</code> module</b>"
   language_not_supported: "<b>❌ Language not supported, supported languages: <code>{}</code></b>"
   set_lang_success: "<b>✅ Language successfully changed to <code>{}</code></b>"
+  changing_branch: "<b>⏳ Changing branch to {}...</b>"
+  changing_warning: "\n<i>⚠️ This branch may be unstable, use it at your own risk!</i>"
+  changing_fail: "<b>❌ Failed to change branch to <code>{}</code>(<code>{}</code>)</b>"
+  invalid_prefix: "<b>❌ Invalid prefix</b>"
+  prefix_not_found: "<b>❌ Prefix not found, current prefixes: ({})</b>"
+  set_prefix_success: "<b>✅ Succesfully changed prefix to <code>{}</code></b>"
+  del_prefix_success: "<b>✅ Succesfully removed <code>{}</code> prefix</b>"
 
 eval:
   result: "<b>🐍 Code:</b>\n<pre language=\"python\">{}</pre>\n<b>✅ Result:</b>\n<code>{}</code>\n"
@@ -23,7 +30,7 @@ terminal:
   no_reply: "<b>❔ Reply to message with running terminal</b>"
 
 help:
-  modules: "<b>Teagram modules</b>\n\n"
+  modules: "<b>☕ Teagram modules</b>\n\n"
 
 info:
   ping: "<b>⚡ Ping: {}ms</b>"

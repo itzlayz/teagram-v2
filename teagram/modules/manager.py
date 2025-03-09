@@ -147,6 +147,43 @@ class Manager(loader.Module):
         except Exception as e:
             return await utils.answer(message, self.get("unexpected_error").format(e))
 
+    @loader.command(alias="ch_branch")
+    async def change_branch(self, message):
+        branch_name = ""
+        try:
+            repo = git.Repo(os.path.abspath("."))
+            repo.remotes.origin.fetch()
+
+            branch_name = repo.active_branch.name
+
+            if branch_name == "dev":
+                branch_name = "main"
+            else:
+                branch_name = "dev"
+
+            message = await utils.answer(
+                message,
+                (
+                    self.get("changing_branch").format(branch_name)
+                    + self.get("changing_warning")
+                    if branch_name == "dev"
+                    else ""
+                ),
+            )
+
+            repo.git.checkout(branch_name)
+            repo.git.pull()
+
+            self.check_requirements(repo, repo.head.commit.hexsha)
+
+            await self.restart(message)
+        except git.exc.GitCommandError as e:
+            return await utils.answer(
+                message, self.get("changing_fail").format(branch_name, e)
+            )
+        except Exception as e:
+            return await utils.answer(message, self.get("unexpected_error").format(e))
+
     @loader.command(alias="lm")
     async def loadmod(self, message: Message):
         reply = message.reply_to_message
@@ -210,3 +247,35 @@ class Manager(loader.Module):
 
         self.loader.translator.language = language
         await utils.answer(message, self.get("set_lang_success").format(language))
+
+    @loader.command()
+    async def addprefix(self, message, args: str):
+        prefix = args.split(" ")[0]
+        if not prefix:
+            return await utils.answer(message, self.get("invalid_prefix"))
+
+        prefixes = self.database.get("teagram", "prefix", ["."])
+        prefixes.append(prefix)
+
+        self.database.set("teagram", "prefix", prefixes)
+
+        await utils.answer(message, self.get("set_prefix_success").format(prefix))
+
+    @loader.command()
+    async def delprefix(self, message, args: str):
+        prefix = args.split(" ")[0]
+        if not prefix:
+            return await utils.answer(message, self.get("invalid_prefix"))
+
+        prefixes = self.database.get("teagram", "prefix", ["."])
+        if prefix not in prefixes:
+            prefixes = ", ".join(prefixes)
+
+            return await utils.answer(
+                message, self.get("prefix_not_found").format(prefixes)
+            )
+
+        prefixes.remove(prefix)
+        self.database.set("teagram", "prefix", prefixes)
+
+        await utils.answer(message, self.get("del_prefix_success").format(prefix))
