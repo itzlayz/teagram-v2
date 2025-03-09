@@ -25,7 +25,7 @@ async def get_ram() -> float:
 
         return round(mem, 2)
     except Exception:
-        return "Can't fetch"
+        return "??? "
 
 
 class Info(loader.Module):

@@ -12,6 +12,8 @@ manager:
   unload_success: "<b>✅ Successfully unloaded <code>{}</code> module</b>"
   language_not_supported: "<b>❌ Language not supported, supported languages: <code>{}</code></b>"
   set_lang_success: "<b>✅ Language successfully changed to <code>{}</code></b>"
+  changing_branch: "<b>⏳ Changing branch to {}...</b>\n<i>⚠️ This branch is unstable, use it at your own risk!</i>"
+  changing_fail: "<b>❌ Failed to change branch to <code>{}</code>(<code>{}</code>)</b>"
 
 eval:
   result: "<b>🐍 Code:</b>\n<pre language=\"python\">{}</pre>\n<b>✅ Result:</b>\n<code>{}</code>\n"
