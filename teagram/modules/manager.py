@@ -3,7 +3,7 @@ from pyrogram.types import Message
 from .. import loader, utils
 
 from ..translator import SUPPORTED_LANGUAGES
-from ..types import ModuleException
+from ..types import ModuleException, ModuleVersionException
 
 from time import time
 
@@ -179,8 +179,8 @@ class Manager(loader.Module):
         try:
             module_name = await self.load_module(code)
             await utils.answer(message, self.get("load_success").format(module_name))
-        except ModuleException as error:
-            return await utils.answer(message, f"<b>{error}</b>")
+        except (ModuleException, ModuleVersionException) as error:
+            return await utils.answer(message, error)
 
     @loader.command(alias="ulm")
     async def unloadmod(self, message, args):

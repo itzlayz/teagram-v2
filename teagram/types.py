@@ -57,6 +57,10 @@ class ModuleException(Exception):
     pass
 
 
+class ModuleVersionException(Exception):
+    pass
+
+
 class Module:
     MIN_VERSION = "BETA"
     MODULE_VERSION = "Not specified"

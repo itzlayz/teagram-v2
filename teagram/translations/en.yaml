@@ -27,3 +27,8 @@ help:
 
 info:
   ping: "<b>⚡ Ping: {}ms</b>"
+
+loader:
+  module_class_not_found: "<b>❌ Module's class not found</b>"
+  invalid_module_min_version: "<b>❌ Invalid module's minimal version (<code>{}</code>)</b>"
+  incompatible_version: "<b>❌ Userbot's version is lower than required ({} < {})</b>"

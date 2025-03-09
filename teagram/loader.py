@@ -4,6 +4,7 @@ import logging
 import sys
 import gc
 import os
+import re
 
 from importlib.machinery import ModuleSpec
 from importlib.util import spec_from_file_location, module_from_spec
@@ -14,9 +15,16 @@ from pathlib import Path
 from typing import Final, List
 
 from .utils import BASE_PATH
+from . import __version__
 
 from .dispatcher import Dispatcher
-from .types import Module, StringLoader, ModuleException, ABCLoader
+from .types import (
+    Module,
+    StringLoader,
+    ModuleException,
+    ModuleVersionException,
+    ABCLoader,
+)
 
 from .inline import InlineDispatcher
 from .translator import Translator, ModuleTranslator
@@ -111,6 +119,9 @@ class Loader(ABCLoader):
 
         self.translator = Translator(self.database)
 
+    def get(self, key: str):
+        return self.translator.get("loader", key)
+
     async def load(self):
         await self.load_modules()
 
@@ -173,10 +184,33 @@ class Loader(ABCLoader):
         )
 
         if not module_class:
+            sys.modules.pop(module_name, None)
+
             raise ModuleException("❌ Module class not found")
 
         module_class.__origin__ = origin
         name = getattr(module_class, "name", module_class.__class__.__name__)
+
+        min_version = module_class.MIN_VERSION
+        if min_version != "BETA":
+            if min_version != "Not specified":
+                exception = ""
+                if not re.fullmatch(r"\d+\.\d+\.\d+", min_version):
+                    exception = self.get("invalid_module_min_version").format(
+                        min_version
+                    )
+
+                current_version = tuple(map(int, __version__.split(".")))
+                required_version = tuple(map(int, min_version.split(".")))
+
+                if current_version < required_version:
+                    exception = self.get("incompatible_version").format(
+                        __version__, min_version
+                    )
+
+                if exception:
+                    sys.modules.pop(module_name, None)
+                    raise ModuleVersionException(exception)
 
         if self.lookup(name):
             raise ModuleException(f"❌ Module {name} has already loaded")

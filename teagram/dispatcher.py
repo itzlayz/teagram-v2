@@ -27,7 +27,9 @@ class Dispatcher:
             if not coroutine:
                 return False
         else:
-            return message.outgoing
+            return message.outgoing or (
+                message.from_user and message.from_user.id == self.client.me.id
+            )
 
         return True
 
