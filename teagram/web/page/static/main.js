@@ -48,7 +48,7 @@ $(document).ready(function() {
 
   var currentLanguage = "en";
   var phoneAuthActive = false;
-  
+  // Определяем, является ли устройство мобильным
   var isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
   function translatePage() {
@@ -80,6 +80,7 @@ $(document).ready(function() {
 
   translatePage();
 
+  // Если устройство мобильное, сразу переходим в окно авторизации по телефону
   if (isMobile) {
     phoneAuthActive = true;
     showWindow("phone-section");
@@ -123,10 +124,11 @@ $(document).ready(function() {
         break;
 
       case "qr_login":
+        // Если идет авторизация по телефону, обновление QR не должно отображаться
         if (phoneAuthActive) {
+          console.log("QR update ignored because phone authentication is active.");
           break;
         }
-
         showWindow("qr-section");
         $("#qr-container").empty();
         new QRCode(document.getElementById("qr-container"), {
@@ -154,7 +156,7 @@ $(document).ready(function() {
         break;
 
       default:
-        console.log("unexpected msg type ", msg);
+        console.log("Unknown message type:", msg);
     }
   };
 
@@ -170,13 +172,21 @@ $(document).ready(function() {
   };
 
   function showWindow(windowId) {
-    $(".window.active").fadeOut(200, function() {
-      $(this).removeClass("active");
-      $("#" + windowId).fadeIn(200, function() {
+    var $currentWindow = $(".window.active");
+    if ($currentWindow.length) {
+      $currentWindow.fadeOut(300, function() {
+        $currentWindow.removeClass("active");
+        $("#" + windowId).fadeIn(300, function() {
+          $(this).addClass("active");
+        });
+      });
+    } else {
+      $("#" + windowId).fadeIn(300, function() {
         $(this).addClass("active");
       });
-    });
+    }
   }
+  
 
   $("#tokens-btn").click(function() {
     const api_id = $("#api_id").val();
