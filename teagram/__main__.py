@@ -14,6 +14,7 @@ parser.add_argument("--no-web", "-nw", action="store_true")
 parser.add_argument("--test-mode", "-test", action="store_true")
 parser.add_argument("--debug", "-d", action="store_true")
 
+parser.add_argument("--hot-reload", "-w", action="store_true")
 parser.add_argument("--port", "-p", type=int, required=False)
 
 if __name__ == "__main__":

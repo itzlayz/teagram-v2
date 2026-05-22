@@ -42,7 +42,10 @@ class Evaluator(loader.Module):
         env = {
             "self": self,
             "client": self.client,
+            "loader": self.inline._loader,
             "message": message,
+            "msg": message,
+            "m": message,
             "args": args,
         }
 

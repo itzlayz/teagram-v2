@@ -15,11 +15,12 @@
 > Needs python 3.8+
 
 ```bash
-apt update && apt upgrade -y && apt install -y openssl git python3 python3-pip
+sudo apt update && sudo apt upgrade -y && sudo apt install -y openssl git python3 python3-pip
 git clone https://github.com/itzlayz/teagram-v2 && cd teagram-v2 && pip install -r requirements.txt && python3 -m teagram
 ```
 
 <h1>✨ Advantages:</h1>
 <ul>
+    <li>User-friendly authorization</b>
     <li>High performance</li>
 </ul>

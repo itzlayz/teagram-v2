@@ -26,6 +26,11 @@ body {
 h1 {
   font-size: 24px;
   margin-bottom: 24px;
+  min-height: 40px;
+}
+
+h1:empty::before {
+  content: "\00a0";
 }
 
 #qr-wrapper {
@@ -39,9 +44,16 @@ h1 {
 }
 
 #qr-container {
-  width: 200px;
-  height: 200px;
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  transition: filter 0.3s ease;
+}
+
+#qr-container:hover {
+  filter: brightness(0.8);
 }
 
 .spinner {

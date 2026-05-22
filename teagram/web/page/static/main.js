@@ -1,7 +1,12 @@
 $(document).ready(function() {
   var translations = {
     en: {
+      "welcome_message": "Welcome to Teagram-v2. To start, press button below and follow instructions.",
+      "welcome_button": "Get Started",
       "enter_tokens_title": "Enter API Tokens",
+      "token_instruction1": "Visit the website <a href='https://my.telegram.org' target='_blank'>my.telegram.org</a>",
+      "token_instruction2": "Go to 'API development tools'",
+      "token_instruction3": "Copy your API ID and API HASH, and enter them in the fields above",
       "api_id_placeholder": "API ID",
       "api_hash_placeholder": "API HASH",
       "submit_tokens": "Submit Tokens",
@@ -20,10 +25,16 @@ $(document).ready(function() {
       "two_factor_title": "Two-Factor Authentication",
       "password_placeholder": "Password",
       "submit_password": "Submit Password",
+      "password_hint": "Hint: %s", // 35833/42
       "final_message": "Finished! Return to Telegram and wait for inline bot."
     },
     ru: {
+      "welcome_message": "Добро пожаловать в Teagram-v2. Чтобы начать, нажмите кнопку ниже и следуйте инструкциям.",
+      "welcome_button": "Начать",
       "enter_tokens_title": "Введите API токены",
+      "token_instruction1": "Зайдите на сайт <a href='https://my.telegram.org' target='_blank'>my.telegram.org</a>",
+      "token_instruction2": "Перейдите в раздел «API development tools»",
+      "token_instruction3": "Скопируйте API ID и API HASH, и введите их в поля выше",
       "api_id_placeholder": "API ID",
       "api_hash_placeholder": "API HASH",
       "submit_tokens": "Подтвердить",
@@ -42,22 +53,30 @@ $(document).ready(function() {
       "two_factor_title": "Двухфакторная аутентификация",
       "password_placeholder": "Пароль",
       "submit_password": "Подтвердить",
+      "password_hint": "Подсказка: %s", // 35833/42
       "final_message": "Готово! Вернитесь в Telegram и ждите inline-бота."
     }
   };
 
+  var isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  var firstTranslation = false;
+  var hasStarted = false;
   var currentLanguage = "en";
   var phoneAuthActive = false;
-  // Определяем, является ли устройство мобильным
-  var isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  var pendingMessages = [];
 
-  function translatePage() {
+  function translatePage(animated) {
+    animated = typeof animated !== 'undefined' ? animated : true;
     $('[data-key]').each(function() {
       var key = $(this).data('key');
       if (translations[currentLanguage][key]) {
-        $(this).fadeOut(200, function() {
-          $(this).html(translations[currentLanguage][key]).fadeIn(200);
-        });
+        if (firstTranslation || !animated) {
+          $(this).html(translations[currentLanguage][key]);
+        } else {
+          $(this).fadeOut(200, function() {
+            $(this).html(translations[currentLanguage][key]).fadeIn(200);
+          });
+        }
       }
     });
     
@@ -71,36 +90,104 @@ $(document).ready(function() {
     $('[data-button-key]').each(function() {
       var key = $(this).data('button-key');
       if (translations[currentLanguage][key]) {
-        $(this).fadeOut(200, function() {
-          $(this).html(translations[currentLanguage][key]).fadeIn(200);
-        });
+        if (firstTranslation || !animated) {
+          $(this).html(translations[currentLanguage][key]);
+        } else {
+          $(this).fadeOut(200, function() {
+            $(this).html(translations[currentLanguage][key]).fadeIn(200);
+          });
+        }
       }
     });
+    firstTranslation = false;
   }
 
-  translatePage();
+  translatePage(false);
 
-  // Если устройство мобильное, сразу переходим в окно авторизации по телефону
   if (isMobile) {
     phoneAuthActive = true;
     showWindow("phone-section");
   }
 
-  let wsUrl;
-  if (window.location.protocol === "https:") {
-    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-      wsUrl = "wss://localhost:8080/ws";
-    } else {
-      wsUrl = "wss://" + window.location.host + "/ws";
+  function processMessage(msg) {
+    const $message = $("#message");
+    function updateMessage(text) {
+      $message.fadeOut(200, function() {
+        $(this).text(text).fadeIn(200);
+      });
     }
-  } else {
-    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-      wsUrl = "ws://localhost:8080/ws";
-    } else {
-      wsUrl = "ws://" + window.location.host + "/ws";
+    switch (msg.type) {
+      case "enter_tokens":
+        showWindow("tokens-section");
+        updateMessage("");
+        break;
+      case "qr_login":
+        if (phoneAuthActive) break;
+        if (!$("#qr-section").hasClass("active") && !$("#password-section").hasClass("active")) {
+          showWindow("qr-section");
+        } else break;
+
+        $("#qr-container").empty();
+        const qrCode = new QRCodeStyling({
+          width: 205,
+          height: 205,
+          type: "canvas",
+          data: msg.content,
+          image: "https://avatars.githubusercontent.com/u/6113871",
+          dotsOptions: {
+            color: "#ffffff",
+            type: "extra-rounded",
+          },
+          backgroundOptions: {
+            color: "transparent",
+          },
+          imageOptions: {
+            hideBackgroundDots: true,
+            crossOrigin: "anonymous",
+          },
+        });
+        
+        qrCode.append(document.getElementById("qr-container"));
+
+        updateMessage("");
+        break;
+      case "session_password_needed":
+        const password_hint = msg.hint;
+        if (password_hint) {
+          const formattedHint = translations[currentLanguage]["password_hint"].replace('%s', password_hint);
+          $("#password-hint").text(formattedHint).fadeIn("slow");
+        }
+        
+        showWindow("password-section");
+        break;
+      case "message":
+        updateMessage(msg.content);
+        break;
+      case "error":
+        updateMessage(msg.content);
+        break;
+      default:
+        console.log("Unknown message type:", msg);
     }
   }
 
+  function processPendingMessages() {
+    while (pendingMessages.length > 0) {
+      var msg = pendingMessages.shift();
+      processMessage(msg);
+    }
+  }
+
+  $("#welcome-btn").click(function() {
+    hasStarted = true;
+    $("#welcome-section").fadeOut(500, function() {
+      processPendingMessages();
+    });
+  });
+
+  let wsUrl = window.location.protocol === "https:" ? 
+    "wss://" + window.location.host + "/ws" : 
+    "ws://" + window.location.host + "/ws";
   const ws = new WebSocket(wsUrl);
 
   ws.onopen = function() {
@@ -109,55 +196,11 @@ $(document).ready(function() {
 
   ws.onmessage = function(event) {
     const msg = JSON.parse(event.data);
-    const $message = $("#message");
-
-    function updateMessage(text) {
-      $message.fadeOut(200, function() {
-        $(this).text(text).fadeIn(200);
-      });
+    if (!hasStarted) {
+      pendingMessages.push(msg);
+      return;
     }
-
-    switch (msg.type) {
-      case "enter_tokens":
-        showWindow("tokens-section");
-        updateMessage("");
-        break;
-
-      case "qr_login":
-        // Если идет авторизация по телефону, обновление QR не должно отображаться
-        if (phoneAuthActive) {
-          console.log("QR update ignored because phone authentication is active.");
-          break;
-        }
-        showWindow("qr-section");
-        $("#qr-container").empty();
-        new QRCode(document.getElementById("qr-container"), {
-          text: msg.content,
-          width: 200,
-          height: 200,
-          colorDark: "#ffffff",
-          colorLight: "#000000",
-          correctLevel: QRCode.CorrectLevel.H
-        });
-        updateMessage("");
-        break;
-
-      case "session_password_needed":
-        updateMessage(msg.content || "Password required for session.");
-        showWindow("password-section");
-        break;
-
-      case "message":
-        updateMessage(msg.content);
-        break;
-
-      case "error":
-        updateMessage(msg.content);
-        break;
-
-      default:
-        console.log("Unknown message type:", msg);
-    }
+    processMessage(msg);
   };
 
   ws.onclose = function(event) {
@@ -186,7 +229,6 @@ $(document).ready(function() {
       });
     }
   }
-  
 
   $("#tokens-btn").click(function() {
     const api_id = $("#api_id").val();
@@ -197,7 +239,7 @@ $(document).ready(function() {
       API_ID: api_id,
       API_HASH: api_hash
     }));
-  
+
     showWindow("qr-section");
     $("#message").fadeOut(200, function() {
       $(this).empty().fadeIn(200);
@@ -224,7 +266,6 @@ $(document).ready(function() {
       type: "phone_number",
       phone_number: phone_number
     }));
-    
     $("#phone-step1").fadeOut("fast", function() {
       $("#phone-step2").fadeIn("fast");
     });
@@ -249,6 +290,60 @@ $(document).ready(function() {
   $("#lang-switch").click(function(e) {
     e.preventDefault();
     currentLanguage = (currentLanguage === "en") ? "ru" : "en";
-    translatePage();
+    translatePage(true);
+  });
+  
+  $("#qr-container").on("click", function() {
+    ws.send(JSON.stringify({ type: "authorize_qr" }));
+  });
+
+  var greetings = [
+    "Hello!", "Привет!", "Hola!", "Bonjour!", "Ciao!", "Hallo!", "Olá!", "Hej!", "Ahoj!", "Szia!",
+    "Salam!", "Namaste!", "Konnichiwa!", "Annyeong!", "Merhaba!", "Yassas!", "Shalom!",
+    "Salue!", "Sveiki!", "Dobrý den!", "Tere!", "Xin chào!", "Selam!", "Mabuhay!", "Sawadee!",
+    "Jambo!", "Habari!", "Bula!", "Kamusta!", "Sawatdee!", "God dag!", "Moien!", "Halo!", "Cześć!"
+  ];
+  
+  function typeEffect(element, text, callback) {
+    var index = 0;
+    var interval = setInterval(function() {
+      $(element).append(text[index]);
+      index++;
+      if (index === text.length) {
+        clearInterval(interval);
+        if (callback) setTimeout(callback, 1000);
+      }
+    }, 100);
+  }
+
+  function deleteEffect(element, callback) {
+    var text = $(element).text();
+    var interval = setInterval(function() {
+      text = text.slice(0, -1);
+      $(element).text(text);
+      if (text.length === 0) {
+        clearInterval(interval);
+        $(element).html('&nbsp;');
+        if (callback) callback();
+      }
+    }, 50);
+  }
+  
+  function cycleGreetings(greetingsArr, index) {
+    var element = document.querySelector('h1[data-key="welcome_title"]');
+    if (!element) return;
+    typeEffect(element, greetingsArr[index], function() {
+      setTimeout(function() {
+        deleteEffect(element, function() {
+          var nextIndex = (index + 1) % greetingsArr.length;
+          cycleGreetings(greetingsArr, nextIndex);
+        });
+      }, 1000);
+    });
+  }
+
+  $("#welcome-section").fadeOut(500, function() {
+    cycleGreetings(greetings, 0);
+    $("#welcome-section").fadeIn(1000);
   });
 });

@@ -68,7 +68,7 @@ class Stream:
                 + f'<b>🖥️ STDOUT:</b>\n<pre language="shell">{self.stdout}</pre>\n'
             )
             if self.stderr:
-                text += f"<b>❌ STDERR:</b>\n<pre>{self.stderr}</pre>"
+                text += f"<b><emoji id=5210952531676504517>❌</emoji> STDERR:</b>\n<pre>{self.stderr}</pre>"
 
             self.message = await utils.answer(self.message, text)
 
@@ -84,7 +84,7 @@ class Stream:
             )
 
             if self.stderr:
-                text += f"<b>❌ STDERR:</b>\n<pre>{self.stderr}</pre>"
+                text += f"<b><emoji id=5210952531676504517>❌</emoji> STDERR:</b>\n<pre>{self.stderr}</pre>"
 
             await utils.answer(self.message, text)
 

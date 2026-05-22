@@ -12,4 +12,5 @@ database.json
 
 .vscode/settings.json
 *.log
-custom_modules/*
+
+custom_modules

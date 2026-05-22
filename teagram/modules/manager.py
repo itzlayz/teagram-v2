@@ -13,6 +13,8 @@ import logging
 import atexit
 import psutil
 
+import aiohttp
+
 import sys
 import os
 
@@ -53,14 +55,18 @@ class Manager(loader.Module):
     strings = {"name": "Manager"}
 
     async def on_load(self):
-        data = self.database.get("teagram", "restart_info", None)
-        if data:
-            restart_time = round(time() - data["time"])
-            message = await self.client.get_messages(data["chat"], data["id"])
+        try:
+            data = self.database.get("teagram", "restart_info", None)
+            if data:
+                restart_time = round(time() - data["time"])
+                message = await self.client.get_messages(data["chat"], data["id"])
 
-            await utils.answer(
-                message, self.get("restart_success").format(restart_time)
-            )
+                await utils.answer(
+                    message, self.get("restart_success").format(restart_time)
+                )
+        except Exception:
+            logging.exception("Failed to change restart message")
+        finally:
             self.database.pop("teagram", "restart_info")
 
     def check_requirements(self, repo, sha):
@@ -147,8 +153,8 @@ class Manager(loader.Module):
         except Exception as e:
             return await utils.answer(message, self.get("unexpected_error").format(e))
 
-    @loader.command(alias="dev")
-    async def dev_branch(self, message):
+    @loader.command(alias="ch_branch")
+    async def change_branch(self, message):
         branch_name = ""
         try:
             repo = git.Repo(os.path.abspath("."))
@@ -162,7 +168,13 @@ class Manager(loader.Module):
                 branch_name = "dev"
 
             message = await utils.answer(
-                message, self.get("changing_branch").format(branch_name)
+                message,
+                (
+                    self.get("changing_branch").format(branch_name)
+                    + self.get("changing_warning")
+                    if branch_name == "dev"
+                    else ""
+                ),
             )
 
             repo.git.checkout(branch_name)
@@ -228,6 +240,24 @@ class Manager(loader.Module):
 
         await utils.answer(message, self.get("unload_success").format(module_name))
 
+    @loader.command(alias="dlm")
+    async def downloadmod(self, message, args):
+        url = args.strip()
+        if not url:
+            return await utils.answer(message, self.get("module_not_found"))
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    module_code = await response.text()
+                    if not module_code:
+                        raise Exception()
+        except Exception:
+            return await utils.answer(message, self.get("unexpected_error"))
+
+        module_name = await self.load_module(module_code)
+        await utils.answer(message, self.get("load_success").format(module_name))
+
     @loader.command()
     async def setlang(self, message, args: str):
         language = args.strip().lower()
@@ -241,3 +271,35 @@ class Manager(loader.Module):
 
         self.loader.translator.language = language
         await utils.answer(message, self.get("set_lang_success").format(language))
+
+    @loader.command()
+    async def addprefix(self, message, args: str):
+        prefix = args.split(" ")[0]
+        if not prefix:
+            return await utils.answer(message, self.get("invalid_prefix"))
+
+        prefixes = self.database.get("teagram", "prefix", ["."])
+        prefixes.append(prefix)
+
+        self.database.set("teagram", "prefix", prefixes)
+
+        await utils.answer(message, self.get("set_prefix_success").format(prefix))
+
+    @loader.command()
+    async def delprefix(self, message, args: str):
+        prefix = args.split(" ")[0]
+        if not prefix:
+            return await utils.answer(message, self.get("invalid_prefix"))
+
+        prefixes = self.database.get("teagram", "prefix", ["."])
+        if prefix not in prefixes:
+            prefixes = ", ".join(prefixes)
+
+            return await utils.answer(
+                message, self.get("prefix_not_found").format(prefixes)
+            )
+
+        prefixes.remove(prefix)
+        self.database.set("teagram", "prefix", prefixes)
+
+        await utils.answer(message, self.get("del_prefix_success").format(prefix))

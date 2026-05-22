@@ -9,15 +9,6 @@ from importlib.abc import SourceLoader
 from abc import ABC, abstractmethod
 
 
-def get_methods(cls, end: str, attribute: str = ""):
-    return {
-        method_name.replace(end, ""): getattr(cls, method_name)
-        for method_name in dir(cls)
-        if callable(getattr(cls, method_name))
-        and (method_name.endswith(end) or hasattr(getattr(cls, method_name), attribute))
-    }
-
-
 class ABCLoader(ABC):
     def __init__(self, client: CustomClient, database: Database):
         self.client: CustomClient
@@ -32,8 +23,10 @@ class ABCLoader(ABC):
         self.raw_handlers: typing.List[types.FunctionType]
         self.watchers: typing.List[types.FunctionType]
 
-        self.inline_handlers: typing.List[types.FunctionType]
-        self.callback_handlers: typing.List[types.FunctionType]
+        self.inline_handlers: typing.Dict[str, types.FunctionType]
+        self.callback_handlers: typing.Dict[str, types.FunctionType]
+
+        self.message_handlers: typing.List[types.FunctionType]
 
         self.dispatcher: typing.Any
         self.inline_dispatcher: typing.Any
@@ -73,11 +66,16 @@ class Module:
     def load_init(self):
         self.commands = get_methods(self, "cmd", "is_command")
         self.watchers = get_methods(self, "watcher", "is_watcher")
-        self.inline_handlers = get_methods(self, "inline_handler", "is_inline_handler")
+
+        self.inline_handlers = get_methods(self, "_inline_handler", "is_inline_handler")
         self.callback_handlers = get_methods(
-            self, "callback_handler", "is_callback_handler"
+            self, "_callback_handler", "is_callback_handler"
         )
+
         self.raw_handlers = get_methods(self, "raw_handler", "is_raw_handler")
+        self.message_handlers = list(
+            get_methods(self, "_message_handler", "is_message_handler").values()
+        )
 
     async def on_load(self):
         pass
@@ -102,3 +100,18 @@ class StringLoader(SourceLoader):
 
     def get_data(self, _: str) -> str:
         return self.data
+
+
+def get_methods(cls, end: str, attribute: str = ""):
+    methods = {}
+
+    for method_name in dir(cls):
+        method = getattr(cls, method_name)
+
+        if callable(method) and (
+            method_name.endswith(end) or hasattr(method, attribute)
+        ):
+            key = method_name.replace(end, "")
+            methods[key] = method
+
+    return methods

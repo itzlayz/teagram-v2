@@ -4,16 +4,21 @@ manager:
   restarting: "<b>⏳ Restarting...</b>"
   checking_updates: "<b>❔ Checking for update...</b>"
   uptodate: "<b>✅ Up to date</b>"
-  update_fail: "<b>❌ Update failed:</b> <code>{}</code>"
-  unexpected_error: "<b>❌ An unexpected error occurred</b> <code>{}</code>"
-  module_not_found: "<b>❌ No module specified</b>"
-  empty_file: "<b>❌ File empty or corrupted</b>"
+  update_fail: "<b><emoji id=5210952531676504517>❌</emoji> Update failed:</b> <code>{}</code>"
+  unexpected_error: "<b><emoji id=5210952531676504517>❌</emoji> An unexpected error occurred</b> <code>{}</code>"
+  module_not_found: "<b><emoji id=5210952531676504517>❌</emoji> No module specified</b>"
+  empty_file: "<b><emoji id=5210952531676504517>❌</emoji> File empty or corrupted</b>"
   load_success: "<b>✅ Successfully loaded <code>{}</code> module</b>"
   unload_success: "<b>✅ Successfully unloaded <code>{}</code> module</b>"
-  language_not_supported: "<b>❌ Language not supported, supported languages: <code>{}</code></b>"
+  language_not_supported: "<b><emoji id=5210952531676504517>❌</emoji> Language not supported, supported languages: <code>{}</code></b>"
   set_lang_success: "<b>✅ Language successfully changed to <code>{}</code></b>"
-  changing_branch: "<b>⏳ Changing branch to {}...</b>\n<i>⚠️ This branch is unstable, use it at your own risk!</i>"
-  changing_fail: "<b>❌ Failed to change branch to <code>{}</code>(<code>{}</code>)</b>"
+  changing_branch: "<b>⏳ Changing branch to {}...</b>"
+  changing_warning: "\n<i>⚠️ This branch may be unstable, use it at your own risk!</i>"
+  changing_fail: "<b><emoji id=5210952531676504517>❌</emoji> Failed to change branch to <code>{}</code>(<code>{}</code>)</b>"
+  invalid_prefix: "<b><emoji id=5210952531676504517>❌</emoji> Invalid prefix</b>"
+  prefix_not_found: "<b><emoji id=5210952531676504517>❌</emoji> Prefix not found, current prefixes: ({})</b>"
+  set_prefix_success: "<b>✅ Succesfully added <code>{}</code> prefix</b>"
+  del_prefix_success: "<b>✅ Succesfully removed <code>{}</code> prefix</b>"
 
 eval:
   result: "<b>🐍 Code:</b>\n<pre language=\"python\">{}</pre>\n<b>✅ Result:</b>\n<code>{}</code>\n"
@@ -21,16 +26,23 @@ eval:
 terminal:
   running_command: "⏳ <b>Running command</b>:\n<code>{}</code>"
   command: "<b>🖥️ Command:</b>\n<code>{}</code>\n\n"
-  terminated: "<b>❌ Terminated</b>\n"
+  terminated: "<b><emoji id=5210952531676504517>❌</emoji> Terminated</b>\n"
   no_reply: "<b>❔ Reply to message with running terminal</b>"
 
 help:
-  modules: "<b>Teagram modules</b>\n\n"
+  modules: "<b>☕ Teagram modules</b>\n\n"
 
 info:
   ping: "<b>⚡ Ping: {}ms</b>"
+  hello_world: "<b>👋 Welcome to Teagram-v2!</b>\n<b>To start using userbot, use <code>{}help</code> to get list of commands.</b>"
+  ram: "RAM"
+  cpu: "CPU"
+  uptime: "Uptime"
+  version: "Version"
 
 loader:
-  module_class_not_found: "<b>❌ Module's class not found</b>"
-  invalid_module_min_version: "<b>❌ Invalid module's minimal version (<code>{}</code>)</b>"
-  incompatible_version: "<b>❌ Userbot's version is lower than required ({} < {})</b>"
+  module_class_not_found: "<b><emoji id=5210952531676504517>❌</emoji> Module's class not found</b>"
+  invalid_module_min_version: "<b><emoji id=5210952531676504517>❌</emoji> Invalid module's minimal version (<code>{}</code>)</b>"
+  incompatible_version: "<b><emoji id=5210952531676504517>❗</emoji> Userbot's version is lower than required ({} < {})</b>"
+  module_already_loaded: f"<b>🤷 Module <code>{}</code> has already loaded</b>"
+  unload_core_module_fault: "<b>⛔ Core module can't be unloaded</b>"

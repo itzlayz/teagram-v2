@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from os import remove
 from sys import exit
@@ -8,6 +9,8 @@ from configparser import ConfigParser, NoSectionError, NoOptionError
 from qrcode.main import QRCode
 
 from pyrogram import errors
+from pyrogram.types import User
+
 from pyrogram.raw.functions.account.get_password import GetPassword
 
 from .web import WebCore
@@ -98,8 +101,7 @@ class Authorization:
         while True:
             twofa = getpass("Enter 2FA password: ")
             try:
-                await self.client.check_password(twofa)
-                return twofa
+                return await self.client.check_password(twofa)
             except errors.PasswordHashInvalid:
                 logger.error("Invalid password, retrying...")
             except errors.FloodWait as err:
@@ -109,6 +111,7 @@ class Authorization:
         while True:
             try:
                 phone = input("Enter phone number: ")
+
                 result = await self.client.send_code(phone)
                 return phone, result.phone_code_hash
             except errors.PhoneNumberInvalid:
@@ -179,30 +182,40 @@ class Authorization:
 
         web = WebCore(port=self.port, test_mode=self.client.test_mode)
 
-        await web.run()
-        return web.client
+        client = await web.run()
+        del web
+
+        return client
 
     async def _qr_authorize(self):
         from pyrogram.qrlogin import QRLogin
 
+        await self.client.connect()
+
         qr_login = QRLogin(self.client)
         await qr_login.recreate()
 
-        logger.info("Scan the QR code below:")
-        logger.info("Settings > Privacy and Security > Active Sessions > Scan QR Code")
-        await self.generate_qrcode_from_url(qr_login.url)
+        user = None
+        while not isinstance(user, User):
+            try:
+                logger.info("Scan the QR code below:")
+                logger.info(
+                    "Settings > Privacy and Security > Active Sessions > Scan QR Code"
+                )
+                await self.generate_qrcode_from_url(qr_login.url)
 
-        try:
-            user = await qr_login.wait()
-            logger.info(f"QR login successful for user: {user.first_name}")
-        except Exception as e:
-            logger.error(f"QR login failed: {e}")
-            raise e
+                user = await qr_login.wait(10)
+            except errors.SessionPasswordNeeded:
+                user = await self.get_password()
+            except asyncio.TimeoutError:
+                await qr_login.recreate()
 
         await self.client.disconnect()
         return self.client
 
     async def _phone_authorize(self):
+        await self.client.connect()
+
         phone, phone_hash = await self.get_phone_code()
 
         await self.enter_phone_code(phone, phone_hash)

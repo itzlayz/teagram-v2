@@ -1,0 +1,120 @@
+.
+├── assets
+│   ├── bot_avatar.png
+│   └── teagram_banner.png
+├── config.ini
+├── database.json
+├── dev_requirements.txt
+├── LICENSE
+├── optional_requirements.txt
+├── README.md
+├── requirements.txt
+├── structure.txt
+├── teagram
+│   ├── auth.py
+│   ├── client.py
+│   ├── custom_modules
+│   │   ├── __pycache__
+│   │   └── test_inline.py
+│   ├── database
+│   │   ├── database.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   ├── dispatcher.py
+│   ├── hot_reload.py
+│   ├── __init__.py
+│   ├── inline
+│   │   ├── core.py
+│   │   ├── event_manager.py
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   ├── token_manager.py
+│   │   └── types.py
+│   ├── loader.py
+│   ├── __main__.py
+│   ├── main.py
+│   ├── modules
+│   │   ├── eval.py
+│   │   ├── help.py
+│   │   ├── info.py
+│   │   ├── manager.py
+│   │   ├── __pycache__
+│   │   └── terminal.py
+│   ├── __pycache__
+│   │   ├── argparser.cpython-311.pyc
+│   │   ├── auth.cpython-310.pyc
+│   │   ├── auth.cpython-311.pyc
+│   │   ├── client.cpython-310.pyc
+│   │   ├── client.cpython-311.pyc
+│   │   ├── dispatcher.cpython-310.pyc
+│   │   ├── dispatcher.cpython-311.pyc
+│   │   ├── hot_reload.cpython-311.pyc
+│   │   ├── hotreload.cpython-311.pyc
+│   │   ├── __init__.cpython-310.pyc
+│   │   ├── __init__.cpython-311.pyc
+│   │   ├── loader.cpython-310.pyc
+│   │   ├── loader.cpython-311.pyc
+│   │   ├── __main__.cpython-310.pyc
+│   │   ├── main.cpython-310.pyc
+│   │   ├── __main__.cpython-311.pyc
+│   │   ├── main.cpython-311.pyc
+│   │   ├── translator.cpython-310.pyc
+│   │   ├── translator.cpython-311.pyc
+│   │   ├── types.cpython-310.pyc
+│   │   ├── types.cpython-311.pyc
+│   │   ├── utils.cpython-310.pyc
+│   │   └── utils.cpython-311.pyc
+│   ├── translations
+│   │   ├── en.yaml
+│   │   └── ru.yaml
+│   ├── translator.py
+│   ├── types.py
+│   ├── utils.py
+│   └── web
+│       ├── core.py
+│       ├── __init__.py
+│       ├── page
+│       ├── proxy.py
+│       ├── __pycache__
+│       └── websocket.py
+├── teagram_v2.session
+└── venv
+    ├── bin
+    │   ├── activate
+    │   ├── activate.csh
+    │   ├── activate.fish
+    │   ├── Activate.ps1
+    │   ├── normalizer
+    │   ├── pip
+    │   ├── pip3
+    │   ├── pip3.11
+    │   ├── prichunkpng
+    │   ├── pricolpng
+    │   ├── priditherpng
+    │   ├── priforgepng
+    │   ├── prigreypng
+    │   ├── pripalpng
+    │   ├── pripamtopng
+    │   ├── priplan9topng
+    │   ├── pripnglsch
+    │   ├── pripngtopam
+    │   ├── prirowpng
+    │   ├── priweavepng
+    │   ├── pybabel
+    │   ├── python -> python3
+    │   ├── python3 -> /usr/bin/python3
+    │   ├── python3.11 -> python3
+    │   ├── qr
+    │   ├── watchfiles
+    │   ├── watchmedo
+    │   └── websockets
+    ├── include
+    │   └── python3.11
+    ├── lib
+    │   └── python3.11
+    ├── lib64 -> lib
+    ├── pyvenv.cfg
+    └── share
+        └── man
+
+25 directories, 93 files

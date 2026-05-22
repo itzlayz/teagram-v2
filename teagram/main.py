@@ -17,9 +17,9 @@ logging.basicConfig(
 
 logging.getLogger().setLevel(logging.INFO)
 
-logging.getLogger("pyrogram").setLevel(logging.ERROR)
-logging.getLogger("aiogram").setLevel(logging.ERROR)
-logging.getLogger("aiohttp.access").setLevel(logging.ERROR)
+LOGGERS = ["pyrogram", "aiogram", "aiohttp.access", "watchfiles.main"]
+for logger in LOGGERS:
+    logging.getLogger(logger).setLevel(logging.ERROR)
 
 
 class Main:
@@ -42,6 +42,8 @@ class Main:
     async def main(self):
         if getattr(self.arguments, "debug", False):
             logging.getLogger().setLevel(logging.DEBUG)
+            logging.getLogger("pyrogram").setLevel(logging.INFO)
+            logging.getLogger("pyrogram.session").setLevel(logging.ERROR)
 
         database = Database()
 
@@ -59,7 +61,7 @@ class Main:
             me = await client.get_me()
             client.me = me
 
-        loader = Loader(client, database)
+        loader = Loader(client, database, self.arguments)
         await loader.load()
 
         await idle()

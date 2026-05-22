@@ -24,6 +24,7 @@ class WebCore(websocket.WebsocketServer, proxy.ProxyTunnel):
 
     async def run(self):
         await self.start_server(self.port)
-        await self.create_proxy_tunnel()
+        await self.get_proxy()
 
         await asyncio.wait_for(self.login_success.wait(), None)
+        return self.client

@@ -4,16 +4,21 @@ manager:
   restarting: "<b>⏳ Перезагружаемся...</b>"
   checking_updates: "<b>❔ Проверка обновлений...</b>"
   uptodate: "<b>✅ Актуальная версия</b>"
-  update_fail: "<b>❌ Обновление не удалось:</b> <code>{}</code>"
-  unexpected_error: "<b>❌ Неизвестная ошибка</b> <code>{}</code>"
-  module_not_found: "<b>❌ Модуль не указан</b>"
-  empty_file: "<b>❌ Файл пустой или поврежден</b>"
+  update_fail: "<b><emoji id=5210952531676504517>❌</emoji> Обновление не удалось:</b> <code>{}</code>"
+  unexpected_error: "<b><emoji id=5210952531676504517>❌</emoji> Неизвестная ошибка</b> <code>{}</code>"
+  module_not_found: "<b><emoji id=5210952531676504517>❌</emoji> Модуль не указан</b>"
+  empty_file: "<b><emoji id=5210952531676504517>❌</emoji> Файл пустой или поврежден</b>"
   load_success: "<b>✅ Модуль <code>{}</code> успешно загружен</b>"
   unload_success: "<b>✅ Модуль <code>{}</code> успешно выгружен</b>"
-  language_not_supported: "<b>❌ Язык не поддерживается, доступные языки: <code>{}</code></b>"
+  language_not_supported: "<b><emoji id=5210952531676504517>❌</emoji> Язык не поддерживается, доступные языки: <code>{}</code></b>"
   set_lang_success: "<b>✅ Язык успешно сменен на <code>{}</code></b>"
-  changing_branch: "<b>⏳ Изменяем ветку на {}...</b>\n<i>⚠️ Данная ветка нестабильна, используйте ее на свой страх и риск!</i>"
-  changing_fail: "<b>❌ Не удалось изменить ветку на <code>{}</code>(<code>{}</code>)</b>"
+  changing_branch: "<b>⏳ Изменяем ветку на {}...</b>"
+  changing_warning: "\n<i>⚠️ Данная ветка нестабильна, используйте ее на свой страх и риск!</i>"
+  changing_fail: "<b><emoji id=5210952531676504517>❌</emoji> Не удалось изменить ветку на <code>{}</code>(<code>{}</code>)</b>"
+  invalid_prefix: "<b><emoji id=5210952531676504517>❌</emoji> Некорректный префикс</b>"
+  prefix_not_found: "<b><emoji id=5210952531676504517>❌</emoji> Данный префикс не найден, текущие префиксы: ({})</b>"
+  set_prefix_success: "<b>✅ Префикс <code>{}</code> успешно добавлен</b>"
+  del_prefix_success: "<b>✅ Префикс <code>{}</code> успешно удален</b>"
 
 eval:
   result: "<b>🐍 Код:</b>\n<pre language=\"python\">{}</pre>\n<b>✅ Результат:</b>\n<code>{}</code>\n"
@@ -21,16 +26,23 @@ eval:
 terminal:
   running_command: "⏳ <b>Запускаем команду</b>:\n<code>{}</code>"
   command: "<b>🖥️ Команда:</b>\n<code>{}</code>\n\n"
-  terminated: "<b>❌ Убито</b>\n"
+  terminated: "<b><emoji id=5210952531676504517>❌</emoji> Убито</b>\n"
   no_reply: "<b>❔ Ответьте на сообщение с активным терминалом</b>"
 
 help:
-  modules: "<b>Teagram модули</b>\n\n"
+  modules: "<b>☕ Teagram модули</b>\n\n"
 
 info:
   ping: "<b>⚡ Пинг: {}ms</b>"
+  hello_world: "<b>👋 Добро пожаловать в Teagram-v2!</b>\n<b>Чтобы начать пользоваться юзерботом, напишите <code>{}help</code> для получения списка команд.</b>"
+  ram: "ОЗУ"
+  cpu: "ЦПУ"
+  uptime: "Аптайм"
+  version: "Версия"
 
 loader:
-  module_class_not_found: "<b>❌ Класс модуля не найден</b>"
-  invalid_module_min_version: "<b>❌ Некорректная минимальная версия модуля (<code>{}</code>)</b>"
-  incompatible_version: "<b>❌ Версия юзербота ниже минимальной версии модуля ({} < {})</b>"
+  module_class_not_found: "<b><emoji id=5210952531676504517>❌</emoji> Класс модуля не найден</b>"
+  invalid_module_min_version: "<b><emoji id=5210952531676504517>❌</emoji> Некорректная минимальная версия модуля (<code>{}</code>)</b>"
+  incompatible_version: "<b><emoji id=5210952531676504517>❌</emoji> Версия юзербота ниже минимальной версии модуля ({} < {})</b>"
+  module_already_loaded: f"<b>🤷 Модуль <code>{}</code> уже загружен</b>"
+  unload_core_module_fault: "<b>⛔ Встроенный модуль нельзя выгружать</b>"

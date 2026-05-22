@@ -23,9 +23,9 @@ class Help(loader.Module):
             if core and origin != "<core>":
                 continue
 
-            smile = "☕" if origin != "<core>" else "🛠️"
+            smile = "📦" if origin != "<core>" else "🔧"
 
-            commands = ", ".join(
+            commands = " | ".join(
                 f"<code>{cmd}</code>" for cmd in module.commands.keys()
             )
             text = f"<b>{smile} {module_name}:</b> {commands}"

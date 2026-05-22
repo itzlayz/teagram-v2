@@ -1,4 +1,6 @@
 import json
+import uuid
+
 import asyncio
 import logging
 
@@ -8,7 +10,9 @@ from configparser import ConfigParser, NoSectionError, NoOptionError
 from aiohttp import web, WSMsgType
 
 from ..client import CustomClient
+
 from pyrogram import errors
+from pyrogram.types import User
 
 from pyrogram.qrlogin import QRLogin
 from pyrogram.raw.functions.account.get_password import GetPassword
@@ -33,6 +37,12 @@ class WebsocketServer:
         self.connection = None
         self.test_mode = test_mode
 
+        self.need_2fa = False
+        self.hint = None
+
+        self.last_request = None
+        self.session_token = None
+
         self.data = None
         self.client = None
         self.qr_login = None
@@ -44,7 +54,6 @@ class WebsocketServer:
         self.app.router.add_static("/static", path=PAGE_DIR / "static", name="static")
 
         self._config_path = BASE_DIR.parent.parent / "config.ini"
-
         self._config_path.parent.mkdir(parents=True, exist_ok=True)
         self._config = self.load_config()
 
@@ -54,15 +63,35 @@ class WebsocketServer:
         config = ConfigParser()
         if self._config_path.is_file():
             config.read(str(self._config_path))
-
         return config
 
     async def index(self, _) -> web.Response:
         return web.FileResponse(path=PAGE_DIR / "index.html")
 
+    async def send_request(self, data: dict):
+        self.last_request = data
+        if self.connection is None or self.connection.closed:
+            return
+
+        await self.connection.send_json(data)
+
     async def handler(self, request: web.Request) -> web.WebSocketResponse:
+        session_token = request.cookies.get("session_token")
+        if not session_token:
+            session_token = str(uuid.uuid4())
+
+        if self.session_token is None:
+            self.session_token = session_token
+
         ws = web.WebSocketResponse()
+
+        ws.set_cookie(
+            "session_token", session_token, httponly=True, secure=False, expires=30 * 60
+        )
         await ws.prepare(request)
+
+        if self.session_token == session_token and self.last_request:
+            await ws.send_json(self.last_request)
 
         if self.connection is not None:
             await ws.close(code=1008, message=b"Too many connections")
@@ -74,7 +103,7 @@ class WebsocketServer:
             api_id = self._config.get("api_tokens", "api_id")
             api_hash = self._config.get("api_tokens", "api_hash")
             if not api_id or not api_hash:
-                await self.connection.send_json({"type": "enter_tokens"})
+                await self.send_request({"type": "enter_tokens"})
             else:
                 self.client = CustomClient(
                     "../teagram_v2",
@@ -88,7 +117,7 @@ class WebsocketServer:
                 await self.client.connect()
                 await self.handle_qr_authorization()
         except (NoSectionError, NoOptionError):
-            await self.connection.send_json({"type": "enter_tokens"})
+            await self.send_request({"type": "enter_tokens"})
 
         try:
             async for msg in ws:
@@ -121,7 +150,7 @@ class WebsocketServer:
         elif message_type == "authorize_qr":
             await self.handle_qr_authorization()
         else:
-            await self.connection.send_json(
+            await self.send_request(
                 {"type": "error", "content": "Unknown message type"}
             )
 
@@ -147,8 +176,22 @@ class WebsocketServer:
             test_mode=self.test_mode,
         )
         await self.client.connect()
-
         await self.handle_qr_authorization()
+
+    async def handle_password_needed(self):
+        if not self.hint:
+            password = await self.client.invoke(GetPassword())
+            self.hint = password.hint
+
+        await self.send_request(
+            {
+                "type": "session_password_needed",
+                "content": "Password required for cloud authentication.",
+                "hint": self.hint,
+            }
+        )
+
+        self.need_2fa = True
 
     async def handle_phone_number(self, message_data: dict):
         phone_number = message_data.get("phone_number")
@@ -156,109 +199,95 @@ class WebsocketServer:
             result = await self.client.send_code(phone_number)
             self.data = (phone_number, result.phone_code_hash)
 
-            await self.connection.send_json(
+            await self.send_request(
                 {"type": "message", "content": "Success! Sent code to Telegram..."}
             )
         except errors.PhoneNumberInvalid:
-            await self.connection.send_json(
+            await self.send_request(
                 {"type": "error", "content": "Invalid phone number, please try again."}
             )
         except errors.PhoneNumberFlood as error:
-            await self.connection.send_json(
+            await self.send_request(
                 {
                     "type": "error",
                     "content": f"Phone floodwait, retry after: {error.value}",
                 }
             )
         except errors.PhoneNumberBanned:
-            await self.connection.send_json(
+            await self.send_request(
                 {
                     "type": "error",
                     "content": "Phone number banned, please try another number.",
                 }
             )
         except errors.PhoneNumberOccupied:
-            await self.connection.send_json(
+            await self.send_request(
                 {"type": "error", "content": "Phone number is already in use."}
             )
         except errors.BadRequest:
-            await self.connection.send_json(
+            await self.send_request(
                 {"type": "error", "content": "Bad request, please try again."}
             )
 
     async def handle_phone_code(self, message_data: dict):
         if not self.data:
-            await self.connection.send_json(
-                {"type": "error", "content": "Missing phone data."}
-            )
+            await self.send_request({"type": "error", "content": "Missing phone data."})
             return
 
         phone_number, phone_code_hash = self.data
         phone_code = message_data.get("phone_code")
-
         try:
             await self.client.sign_in(phone_number, phone_code_hash, phone_code)
             await self.stop()
         except errors.SessionPasswordNeeded:
-            await self.connection.send_json(
-                {
-                    "type": "session_password_needed",
-                    "content": "Password required for session.",
-                }
-            )
+            await self.handle_password_needed()
 
     async def handle_cloud_auth(self, message_data: dict):
         try:
-            await self.client.invoke(GetPassword())
             await self.client.check_password(message_data.get("password"))
 
-            await self.connection.send_json(
+            await self.send_request(
                 {"type": "message", "content": "Cloud authentication successful."}
             )
-
             await self.stop()
-        except errors.SessionPasswordNeeded:
-            await self.connection.send_json(
-                {
-                    "type": "session_password_needed",
-                    "content": "Password required for cloud authentication.",
-                }
-            )
         except Exception as e:
             logger.error("Cloud auth error: %s", e)
-            await self.connection.send_json(
+            await self.send_request(
                 {"type": "error", "content": "Cloud authentication failed."}
             )
 
     async def handle_qr_authorization(self):
-        self.qr_login = QRLogin(self.client, [])
-        await self.qr_login.recreate()
+        if self.need_2fa:
+            return
 
-        self.qr_wait = asyncio.create_task(self.wait_qr_login())
+        if not self.qr_login and not self.qr_wait:
+            self.qr_login = QRLogin(self.client)
+            self.qr_wait = asyncio.create_task(self.wait_qr_login())
 
-        await self.connection.send_json(
-            {"type": "qr_login", "content": self.qr_login.url}
-        )
+        try:
+            await self.qr_login.recreate()
+            await self.send_request({"type": "qr_login", "content": self.qr_login.url})
+        except errors.SessionPasswordNeeded:
+            await self.handle_password_needed()
 
     async def wait_qr_login(self):
-        state = False
-
-        while not state:
+        interval = 5
+        while True:
             try:
-                try:
-                    state = await self.qr_login.wait(8)
-                except asyncio.TimeoutError:
-                    await self.qr_login.recreate()
-                    await self.connection.send_json(
-                        {"type": "qr_login", "content": self.qr_login.url}
-                    )
-            except errors.SessionPasswordNeeded:
-                return await self.connection.send_json(
-                    {
-                        "type": "session_password_needed",
-                        "content": "Password required for session.",
-                    }
+                state = await self.qr_login.wait(10)
+                if isinstance(state, User):
+                    await self.stop()
+                    break
+            except asyncio.TimeoutError:
+                await self.qr_login.recreate()
+
+                await self.send_request(
+                    {"type": "qr_login", "content": self.qr_login.url}
                 )
+            except errors.SessionPasswordNeeded:
+                await self.handle_password_needed()
+
+            await asyncio.sleep(interval)
 
     async def stop(self):
         try:
@@ -270,12 +299,11 @@ class WebsocketServer:
             await self.runner.shutdown()
             self.login_success.set()
         except Exception as e:
-            pass
+            logger.exception("Error during stop: %s", e)
 
     async def start_server(self, port: int):
         self.runner = web.AppRunner(self.app)
-
         await self.runner.setup()
-        server = web.TCPSite(self.runner, None, port)
 
+        server = web.TCPSite(self.runner, None, port)
         await server.start()

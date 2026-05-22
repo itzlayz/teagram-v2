@@ -47,7 +47,7 @@ def set_attrs(func, *args, **kwargs):
 def command(custom_filters=None, *args, **kwargs):
     def decorator(func):
         if custom_filters:
-            setattr(func, "filters", custom_filters)
+            setattr(func, "_filters", custom_filters)
 
         return set_attrs(func, *args, **kwargs, is_command=True)
 
@@ -57,7 +57,7 @@ def command(custom_filters=None, *args, **kwargs):
 def watcher(custom_filters=None, *args, **kwargs):
     def decorator(func):
         if custom_filters:
-            setattr(func, "filters", custom_filters)
+            setattr(func, "_filters", custom_filters)
 
         return set_attrs(func, *args, **kwargs, is_watcher=True)
 
@@ -74,7 +74,7 @@ def raw_handler(handler: Handler, *args, **kwargs):
 def inline_handler(custom_filters=None, *args, **kwargs):
     def decorator(func):
         if custom_filters:
-            setattr(func, "filters", custom_filters)
+            setattr(func, "_filters", custom_filters)
 
         return set_attrs(func, *args, **kwargs, is_inline_handler=True)
 
@@ -84,15 +84,27 @@ def inline_handler(custom_filters=None, *args, **kwargs):
 def callback_handler(custom_filters=None, *args, **kwargs):
     def decorator(func):
         if custom_filters:
-            setattr(func, "filters", custom_filters)
+            setattr(func, "_filters", custom_filters)
+
+            print(func, func._filters)
 
         return set_attrs(func, *args, **kwargs, is_callback_handler=True)
 
     return decorator
 
 
+def message_handler(custom_filters=None, *args, **kwargs):
+    def decorator(func):
+        if custom_filters:
+            setattr(func, "_filters", custom_filters)
+
+        return set_attrs(func, *args, **kwargs, is_message_handler=True)
+
+    return decorator
+
+
 class Loader(ABCLoader):
-    def __init__(self, client, database):
+    def __init__(self, client, database, arguments):
         self.client = client
         self.database = database
 
@@ -111,16 +123,46 @@ class Loader(ABCLoader):
         self.raw_handlers = []
         self.watchers = []
 
-        self.inline_handlers = []
-        self.callback_handlers = []
+        self.inline_handlers = {}
+        self.callback_handlers = {}
+
+        self.message_handlers = []
 
         self.dispatcher = Dispatcher(client, self)
         self.inline = InlineDispatcher(self)
 
         self.translator = Translator(self.database)
 
+        if getattr(arguments, "hot_reload", False):
+            self.start_watchdog()
+
     def get(self, key: str):
         return self.translator.get("loader", key)
+
+    def _get_module_path(self, file_path: Path) -> str | None:
+        if MODULES_PATH in file_path.parents:
+            return f"teagram.modules.{file_path.stem}"
+        elif CUSTOM_MODULES_PATH in file_path.parents:
+            return f"teagram.custom_modules.{file_path.stem}"
+
+        return None
+
+    def start_watchdog(self):
+        try:
+            from .hot_reload import ModulesWatchdog
+
+            self.watch_manager = ModulesWatchdog(
+                self, [MODULES_PATH, CUSTOM_MODULES_PATH]
+            )
+            self.watch_manager.start()
+
+            return True
+        except ImportError:
+            logging.exception(
+                "To use hot-reload you need to install `dev_requirements.txt`"
+            )
+
+            return self.get("no_watchdog_library")
 
     async def load(self):
         await self.load_modules()
@@ -153,6 +195,7 @@ class Loader(ABCLoader):
         origin: str = "<string>",
         module_source: str = "",
         save_file: bool = False,
+        watchdog: bool = False,
     ):
         if spec is None:
             if origin != "<core>":
@@ -186,7 +229,7 @@ class Loader(ABCLoader):
         if not module_class:
             sys.modules.pop(module_name, None)
 
-            raise ModuleException("❌ Module class not found")
+            raise ModuleException(self.get("module_class_not_found"))
 
         module_class.__origin__ = origin
         name = getattr(module_class, "name", module_class.__class__.__name__)
@@ -213,7 +256,10 @@ class Loader(ABCLoader):
                     raise ModuleVersionException(exception)
 
         if self.lookup(name):
-            raise ModuleException(f"❌ Module {name} has already loaded")
+            if not watchdog:
+                raise ModuleException(self.get("module_already_loaded").format(name))
+
+            await self.unload_module(name, _watchdog=watchdog)
 
         self.prepare_module(module_class)
         if save_file and module_source:
@@ -225,7 +271,7 @@ class Loader(ABCLoader):
         gc.collect()
         return module_class
 
-    async def unload_module(self, module_name: str):
+    async def unload_module(self, module_name: str, *, _watchdog: bool):
         module = None
         for mod in self.modules:
             if module_name.lower() in mod.__class__.__name__.lower():
@@ -233,8 +279,8 @@ class Loader(ABCLoader):
                 break
 
         if module:
-            if module.__origin__ == "<core>":
-                raise ModuleException("❌ Core module can't be unloaded")
+            if module.__origin__ == "<core>" and not _watchdog:
+                raise ModuleException(self.get("unload_core_module_fault"))
 
             self.modules.remove(module)
             await module.on_unload()
@@ -247,12 +293,18 @@ class Loader(ABCLoader):
             self.raw_handlers = [
                 h for h in self.raw_handlers if h not in module.raw_handlers
             ]
-            self.inline_handlers = [
-                h for h in self.inline_handlers if h not in module.inline_handlers
-            ]
-            self.callback_handlers = [
-                h for h in self.callback_handlers if h not in module.callback_handlers
-            ]
+
+            self.inline_handlers = {
+                k: v
+                for k, v in self.inline_handlers.items()
+                if k not in module.inline_handlers
+            }
+
+            self.callback_handlers = {
+                k: v
+                for k, v in self.callback_handlers.items()
+                if k not in module.callback_handlers
+            }
 
             self.aliases = {
                 k: v for k, v in self.aliases.items() if k not in module.commands.keys()
@@ -261,9 +313,12 @@ class Loader(ABCLoader):
         return module.__class__.__name__
 
     def prepare_module(self, module_class: Module):
+        if module_class.__origin__ == "<core>":
+            module_class.loader = self
+
         module_class.client = self.client
         module_class.database = self.database
-        module_class.loader = self
+        module_class.inline = self.inline
 
         module_class.load_init()
         module_class.translator = ModuleTranslator(
@@ -276,8 +331,10 @@ class Loader(ABCLoader):
         self.watchers.extend(module_class.watchers)
 
         self.raw_handlers.extend(module_class.raw_handlers)
-        self.inline_handlers.extend(module_class.inline_handlers)
-        self.callback_handlers.extend(module_class.callback_handlers)
+        self.inline_handlers.update(module_class.inline_handlers)
+        self.callback_handlers.update(module_class.callback_handlers)
+
+        self.message_handlers.extend(module_class.message_handlers)
 
         for name, command in module_class.commands.items():
             aliases = getattr(command, "alias", None)
@@ -287,9 +344,6 @@ class Loader(ABCLoader):
             if aliases:
                 for alias in aliases:
                     self.aliases[alias] = name
-
-        if module_class.__origin__ == "<core>":
-            module_class.loader = self
 
         self.modules.append(module_class)
 

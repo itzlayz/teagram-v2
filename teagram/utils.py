@@ -13,10 +13,15 @@ from . import init_time
 from pyrogram.types import Message
 from pyrogram.enums.parse_mode import ParseMode
 
+from aiogram import types
+
 from enum import Enum
 from urllib.parse import urlparse
 
 FileLike = typing.Optional[typing.Union[BytesIO, IOBase, bytes, str]]
+InlineLike = typing.Union[
+    types.ChosenInlineResult, types.InlineQuery, types.CallbackQuery
+]
 
 BASE_PATH = os.path.normpath(
     os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(__file__))), "..")

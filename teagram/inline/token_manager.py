@@ -1,4 +1,6 @@
 from ..client import CustomClient
+from ..types import ABCLoader
+
 from ..utils import rand
 
 from pyrogram import errors
@@ -9,8 +11,9 @@ import asyncio
 
 
 class TokenManager:
-    def __init__(self, client: CustomClient):
-        self.client = client
+    def __init__(self, loader: ABCLoader):
+        self._loader = loader
+        self.client: CustomClient = loader.client
 
     async def cancel(self, conversation):
         try:
@@ -73,7 +76,7 @@ class TokenManager:
             )
             await conversation.get_response()
 
-            bot_username = f"teagram_v2_{rand(5)}_bot"
+            bot_username = f"@teagram_v2_{rand(5)}_bot"
             await conversation.send_message(bot_username)
 
             await asyncio.sleep(0.5)
@@ -102,7 +105,7 @@ class TokenManager:
 
             bot_username = None
 
-            while True:
+            while not bot_username:
                 try:
                     message = await self.client.get_messages(
                         message.chat.id, message.id
@@ -117,11 +120,19 @@ class TokenManager:
                             if button.text == "»":
                                 await asyncio.sleep(0.25)
                                 await self.client.request_callback_answer(
-                                    message.chat.id, message.id, button.data
+                                    message.chat.id,
+                                    message.id,
+                                    getattr(button, "data", button.callback_data),
                                 )
                                 break
+
+                            if button.text == "«":
+                                bot_username = -1
+                                break
+
                         if bot_username:
                             break
+
                     if bot_username:
                         break
 
@@ -131,7 +142,7 @@ class TokenManager:
 
                 await asyncio.sleep(0.5)
 
-            if not bot_username:
+            if not bot_username or bot_username == -1:
                 logging.info("Teagram bot not found, creating new one...")
                 return await self.create_bot()
 
